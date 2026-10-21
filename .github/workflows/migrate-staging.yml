@@ -1,0 +1,34 @@
+name: Migrate staging database
+
+# Applies supabase/migrations to the STAGING Supabase project. Never the seed
+# (seed.sql is local-only fake data). Skipped until the repository variable
+# SUPABASE_STAGING_PROJECT_REF is set (docs/runbooks/staging-setup.md).
+
+on:
+  push:
+    branches: [main]
+    paths: ["supabase/migrations/**"]
+  workflow_dispatch:
+
+concurrency: migrate-staging
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    if: vars.SUPABASE_STAGING_PROJECT_REF != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx supabase link --project-ref "${{ vars.SUPABASE_STAGING_PROJECT_REF }}"
+      - run: npx supabase db push

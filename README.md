@@ -56,6 +56,7 @@ marketing site or the revenue pipeline.
 | [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) | AI, research, Slack, LinkedIn: permissions, limits, open questions, verification checklist |
 | [docs/PHASES.md](docs/PHASES.md) | Implementation phases with acceptance criteria and tests |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Assumptions, decisions, and inputs needed |
+| [docs/runbooks/staging-setup.md](docs/runbooks/staging-setup.md) | Step-by-step staging setup (Vercel + Supabase Free) |
 
 ## Intended stack
 
