@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+.DS_Store
+supabase/.temp/
+# env files: only the placeholder example is committed
+.env*
+!.env.example
