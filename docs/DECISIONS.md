@@ -315,6 +315,19 @@ If spend runs high, the levers are, in order:
 - a cheaper model for concept batches;
 - the Batch API for non-urgent batches (about half price) [V].
 
+### D-22: Next.js Cache Components. **Decided in Phase 1 (2026-10-21):** off
+
+- **Context.** Next.js 16.4 turns on `cacheComponents` by default. With it, a
+  session read is meant to be cached per user for about five minutes
+  (`use cache: private`) so navigations feel instant.
+- **Decision.** Off. Every page in Studio is private and per-user, and the
+  important property is that a role change or deactivation takes effect on
+  the next request. Re-verifying the session on each request costs a few
+  milliseconds at this scale. `partialPrefetching` requires Cache Components,
+  so it is off too.
+- **Consequence.** Every page renders per request (also needed for the CSP
+  nonce). Revisit only if page speed becomes a problem.
+
 ---
 
 ## 3. Inputs still needed from the user
@@ -333,4 +346,5 @@ If spend runs high, the levers are, in order:
 | Date | Change |
 |---|---|
 | 2026-10-21 | Phase 0 draft created |
+| 2026-10-21 | Phase 1 built locally; D-22 added |
 | 2026-10-21 | User answers recorded: D-01, D-02, D-04, D-11, D-13, D-14, D-19 accepted; D-09, D-10 accepted on recommendation; D-15 deferred to Phase 3; D-16 and D-21 set by the $100/month budget |

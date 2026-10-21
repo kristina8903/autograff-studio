@@ -54,6 +54,10 @@ not have been usable end to end until Phase 9.
 
 ## Phase 1: Application foundation
 
+> **Status (2026-10-21): built and tested locally.** Criteria 1–5 met.
+> Criterion 6 (protected staging deploy) and the restore drill wait on the
+> staging resources. See [the Phase 1 report](phase-reports/phase-1.md).
+
 **Goal.** A secure, empty application: invite-only login, two roles, founder
 profiles, a protected dashboard, the migration and test toolchain, and a
 protected staging deployment.

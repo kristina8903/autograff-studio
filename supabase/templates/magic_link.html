@@ -1,0 +1,5 @@
+<h2>Your sign-in code</h2>
+<p>Enter this code to sign in to Autograff Content Studio:</p>
+<p style="font-size: 24px; font-weight: bold; letter-spacing: 4px">{{ .Token }}</p>
+<p>Or <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email">sign in with this link</a>.</p>
+<p>The code expires in one hour. If you did not try to sign in, ignore this email.</p>

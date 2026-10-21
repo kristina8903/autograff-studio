@@ -16,14 +16,18 @@ exact approved wording, can be scheduled and published.
 **Phase 0 (planning) is complete.** The main decisions were made on
 2026-10-21 (see [DECISIONS.md](docs/DECISIONS.md)): separate repository and
 databases, `@autograff.ai`-only invites, founder approval, and a budget of
-**$100/month, all in**. Phase 1 has not started. No application code
-exists. Nothing is deployed, no credentials have been created, and no DNS has
-been changed.
+**$100/month, all in**.
+
+**Phase 1 (application foundation) is built and tested locally**: invite-only
+sign-in, admin and founder roles, two-factor sign-in for admins, founder
+profiles, and the database security rules. See the
+[Phase 1 report](docs/phase-reports/phase-1.md). Nothing is deployed, no
+cloud credentials have been created, and no DNS has been changed.
 
 | Area | Status |
 |---|---|
 | Product spec, architecture, data model, security, integrations, phases, decisions | Drafted, in [`docs/`](docs/) |
-| Application, auth, database | **Not started** (Phase 1) |
+| Application, auth, database | **Built locally** (Phase 1); not deployed |
 | AI generation | Not started (Phase 4) |
 | Web research | Not started (Phase 5); provider not chosen |
 | Slack integration | Not started (Phase 6); access and terms **not verified** |
@@ -63,27 +67,37 @@ marketing site or the revenue pipeline.
 - A pluggable web research provider.
 - Later: the official Slack API and, if access allows, the LinkedIn API.
 
-## Local setup (planned; available from Phase 1)
+## Local setup
 
-Prerequisites: Node.js (LTS), Docker (for the local Supabase stack), and the
-Supabase CLI (via `npx supabase`).
+Prerequisites: Node.js 22+, and Docker (for the local Supabase stack).
 
 ```bash
-cp .env.example .env.local      # placeholder values; fakes are used for AI/research by default
 npm install
-npx supabase start              # local Postgres, Auth, mail catcher
-npx supabase db reset           # apply migrations + seed fake company, admin and founders
+npm run db:start                # local Postgres, Auth and mail catcher (first run pulls images)
+npm run env:local               # writes .env.local from the local stack (local keys only)
 npm run dev                     # http://localhost:3000
 ```
 
-Tests (planned):
+Sign in at http://localhost:3000/sign-in with a seeded address (see
+`supabase/seed.sql`): `local-admin@autograff.ai`, `local-ceo@autograff.ai` or
+`local-cto@autograff.ai`. Codes and invitation emails land in the local mail
+catcher at http://127.0.0.1:54324; nothing is delivered. The admin is asked to
+set up an authenticator app on first sign-in.
+
+`npm run db:reset` re-applies migrations and the seed. `npm run db:types`
+regenerates `lib/supabase/database.types.ts` after a schema change.
+
+## Tests
 
 ```bash
-npm run typecheck && npm run lint && npm run format:check
-npm test            # unit tests, no network
-npm run test:db     # database/RLS tests against the local Supabase stack
-npm run test:e2e    # Playwright end-to-end tests against local app + fakes
+npm run check       # typecheck + lint + format check + unit tests (no network)
+npm run test:db     # database access-control tests (pgTAP) against the local stack
+npm run test:e2e    # browser tests: production build + local stack; resets the local database
 ```
+
+The browser tests need Chromium (`npx playwright install chromium`, or set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an existing Chromium). CI runs all of the
+above on every pull request (`.github/workflows/ci.yml`).
 
 No real Slack messages, LinkedIn posts or paid API calls are made by ordinary
 test runs. Never copy an `.env` file from another machine or project.

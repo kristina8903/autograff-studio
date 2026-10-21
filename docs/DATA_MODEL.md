@@ -1,5 +1,23 @@
 # Data Model
 
+> **Implemented so far (Phase 1, migration `20261021000001_foundation.sql`):**
+> `companies`, `profiles`, `founders`, `founder_visibility_grants`, `settings`,
+> `audit_events`, the `private.*` helpers, and the functions `record_sign_in`,
+> `admin_set_user_role`, `admin_deactivate_user` and `provision_invited_user`.
+> Differences from the proposal below, all deliberate:
+>
+> - `provision_invited_user(user_id, role, invited_by, founder_id)` reads the
+>   email from Auth itself instead of taking it as a parameter.
+> - A trigger on `auth.users` rejects any email outside
+>   `settings.allowed_email_domains`, on every path. The Auth hook alone did not
+>   cover the admin "create user" endpoint (found in local testing).
+> - Founders cannot edit their own founder record yet; only their profile's
+>   display name. The admin edits founder records.
+> - `private.is_admin()` also requires an MFA-verified session (`aal2`), so
+>   admin rights do not exist in the database without two-factor sign-in.
+> - `audit_events` uses a bigint identity key, and is append-only for every
+>   role, including the database owner (trigger).
+
 Status: **Phase 0 proposal**, 2026-10-21. Postgres (Supabase). Nothing here is
 migrated yet. Table and column names are proposals that will be finalized in
 the Phase 1 and Phase 2 migrations.
