@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { FOUNDER_NAV } from "@/components/founder-nav";
 import { Card, PageHeader } from "@/components/ui";
 import { requireFounder } from "@/lib/auth/dal";
 import {
@@ -40,7 +41,7 @@ export default async function FounderDashboard() {
   ).flatMap(({ data }) => data ?? []);
 
   return (
-    <AppShell nav={[{ href: "/dashboard", label: "Dashboard" }]} email={viewer.email}>
+    <AppShell nav={FOUNDER_NAV} email={viewer.email}>
       <PageHeader
         title={founder ? `Welcome, ${founder.display_name}` : "Welcome"}
         description="Drafts shared with you for review will appear here."

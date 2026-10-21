@@ -44,6 +44,31 @@
 >   slots in SQL, and `lib/domain/coverage.ts` holds the full formula with the
 >   draft buckets at zero. A test checks the two agree. The single
 >   `app.coverage` view in §12 is built in Phase 4, when drafts exist (D-23).
+>
+> **Implemented in Phase 3 (migration `20261021000003_voice_library.sql`):**
+> `voice_profiles`, `voice_profile_versions`, `writing_examples`,
+> `feedback_signals`, the `post_format` enum, and the functions
+> `save_voice_profile_version`, `add_writing_examples`,
+> `update_writing_example`, `delete_writing_example`, `add_feedback_signal`
+> and `review_feedback_signal`. Differences from the proposal below, all
+> deliberate:
+>
+> - `voice_profile_versions` also has `founder_id` (for RLS), plus
+>   `writing_habits` and `style_rules` lists (D-26). `change_reason` is
+>   required.
+> - `writing_examples` has no `search tsvector`; retrieval is TypeScript
+>   (D-25). It adds `eval_holdout` (never retrieved; only on approved examples)
+>   and `body_hash`, unique per founder, so pasting a post twice is a no-op.
+>   `source_url` must be `https://`. `publication_id` comes with publications
+>   (Phase 10).
+> - `feedback_signals` adds `format`, required for format preferences, and
+>   `review_note`. Constraints: a signal linked to a profile version must be
+>   an accepted stable or format preference, and an accepted stable or format
+>   preference must be linked to one. Signals are admin-only; founders don't
+>   see them.
+> - Founders read their own profile, versions and examples, and can add
+>   their own `approved_example` through `add_writing_examples` (D-26).
+>   Nothing else is writable by a founder.
 
 Status: **Phase 0 proposal**, 2026-10-21. Postgres (Supabase). Nothing here is
 migrated yet. Table and column names are proposals that will be finalized in

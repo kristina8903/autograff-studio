@@ -75,6 +75,11 @@ export function addMonths(month: IsoMonth, count: number): IsoMonth {
   return d.toISOString().slice(0, 7);
 }
 
+/** Whole days from `from` to `to` (negative if `to` is earlier). */
+export function daysBetween(from: IsoDate, to: IsoDate): number {
+  return Math.round((toUtc(to).getTime() - toUtc(from).getTime()) / 86_400_000);
+}
+
 /** Every date from `from` to `to`, inclusive. */
 export function eachDay(from: IsoDate, to: IsoDate): IsoDate[] {
   const days: IsoDate[] = [];
