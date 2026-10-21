@@ -9,6 +9,7 @@ import { WEIGHTS, retrieveExamples } from "@/lib/domain/retrieval";
 import { EXAMPLE_COLUMNS, toRetrievable } from "@/lib/server/voice";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AddExampleForm, BulkAddForm, ExampleSettings } from "./example-forms";
+import { ImportExportForm } from "./import-form";
 
 export const metadata: Metadata = { title: "Writing examples" };
 
@@ -81,6 +82,11 @@ export default async function ExamplesPage({ params, searchParams }: PageProps<"
           <BulkAddForm founderId={founderId} />
         </Card>
       </div>
+
+      <Card className="mb-6">
+        <h2 className="mb-3 text-sm font-semibold">Import from a LinkedIn data export</h2>
+        <ImportExportForm founderId={founderId} />
+      </Card>
 
       <Card className="mb-6">
         <h2 className="mb-1 text-sm font-semibold">Which examples would the AI see?</h2>
