@@ -38,7 +38,8 @@ export async function verifyCode(_state: FormState, form: FormData): Promise<For
   const email = cookieStore.get(PENDING_EMAIL_COOKIE)?.value;
   if (!email) redirect("/sign-in");
   const token = String(form.get("code") ?? "").replace(/\s/g, "");
-  if (!/^\d{6}$/.test(token)) return { error: "Enter the 6-digit code from the email." };
+  // Supabase's code length is a project setting (6 locally; hosted projects may use 8).
+  if (!/^\d{6,8}$/.test(token)) return { error: "Enter the code from the email." };
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });

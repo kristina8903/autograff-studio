@@ -90,11 +90,21 @@ These mirror `supabase/config.toml`, which the local stack uses. Under
   | Invite user | `You have been invited to Autograff Content Studio` | `supabase/templates/invite.html` |
   | Magic link | `Your Autograff Content Studio sign-in code` | `supabase/templates/magic_link.html` |
 
-- **Emails / SMTP**: leave the default sender for now.
+- **Email OTP length** (Sign In / Providers → Email): set it to **6**. The
+  app accepts 6–8 digits, but 6 matches the local stack and the email text.
+- **Free plan: templates need your own email sender.** New Free projects
+  cannot edit email templates until custom SMTP is set up (verified
+  2026-10-21). The default templates send links the app deliberately does not
+  accept, so set up SMTP (below) **before** the first sign-in or invite.
+- **Emails / SMTP**: on Free, required (see above). On other plans you could
+  leave the default sender for now.
   - It only delivers to members of your Supabase organization, about 2 emails
-    an hour [S]. That is enough for you to sign in alone.
-  - Before inviting founders, set up a free-tier sender (e.g. Resend) with DNS
-    records on autograff.ai, then enter its SMTP details here.
+    an hour [S].
+  - Set up as done on 2026-10-21. In Resend, add the domain
+    `studio.autograff.ai`, add its DNS records, and create a *Sending access*
+    API key limited to that domain. Then in Supabase use host
+    `smtp.resend.com`, port `465`, username `resend`, the API key as password,
+    and sender `no-reply@studio.autograff.ai`.
 
 ## 4. Create the database tables (GitHub workflow)
 

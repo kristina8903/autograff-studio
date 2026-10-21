@@ -9,7 +9,7 @@ export default function VerifyPage() {
   return (
     <AuthShell
       title="Check your email"
-      description="If that address has access, we've sent it a 6-digit code. It expires in one hour."
+      description="If that address has access, we've sent it a sign-in code. It expires in one hour."
     >
       <CodeForm />
       <p className="mt-4 text-center text-sm text-muted">
