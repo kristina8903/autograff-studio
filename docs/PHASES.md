@@ -128,6 +128,9 @@ only behind protection; restore of a staging backup or export tested once.
 
 ## Phase 2: Monthly strategy and cadence
 
+**Status:** built and tested locally, 2026-10-21. See the
+[Phase 2 report](phase-reports/phase-2.md).
+
 **Goal.** The admin can write versioned monthly briefs and configure each
 founder's cadence. The system computes publishing slots and initial coverage
 for any month.

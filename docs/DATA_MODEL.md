@@ -17,6 +17,33 @@
 >   admin rights do not exist in the database without two-factor sign-in.
 > - `audit_events` uses a bigint identity key, and is append-only for every
 >   role, including the database owner (trigger).
+>
+> **Implemented in Phase 2 (migration `20261021000002_strategy_cadence.sql`):**
+> `monthly_briefs`, `brief_versions`, `cadence_rules`, `calendar_slots`, and
+> the functions `save_brief_version`, `founder_brief`, `set_cadence_rule`,
+> `sync_calendar_slots`, `add_manual_slot`, `update_slot` and
+> `coverage_slot_counts`. Differences from the proposal below, all deliberate:
+>
+> - Every write goes through those functions; `authenticated` has no direct
+>   insert, update or delete on the four tables. Each function audits.
+> - Founders read briefs only through `founder_brief(month)`, which returns the
+>   month, version number, theme and the caller's own emphasis block (D-13).
+>   The raw brief tables are admin-only.
+> - Slot dates are computed in TypeScript (`lib/domain/cadence.ts`, unit-tested
+>   against hand-computed fixtures) and handed to `sync_calendar_slots`, which
+>   checks that every slot falls on a date with a rule in effect, then adds and
+>   removes only **open, future, cadence-generated** slots. Past, filled,
+>   skipped and manual slots are never touched, and the filled slots outside
+>   the new cadence that it had to keep are returned (D-23).
+> - Moving a slot skips the original and adds a manual slot on the new date,
+>   so re-planning cannot bring the old date back (D-24).
+> - `slot_time`, `preferred_local_time` exist but are unused until scheduling
+>   (Phase 7). `calendar_slots.draft_id` has no foreign key until `drafts`
+>   exists (Phase 4).
+> - Coverage: only the slot part exists so far. `coverage_slot_counts` counts
+>   slots in SQL, and `lib/domain/coverage.ts` holds the full formula with the
+>   draft buckets at zero. A test checks the two agree. The single
+>   `app.coverage` view in §12 is built in Phase 4, when drafts exist (D-23).
 
 Status: **Phase 0 proposal**, 2026-10-21. Postgres (Supabase). Nothing here is
 migrated yet. Table and column names are proposals that will be finalized in

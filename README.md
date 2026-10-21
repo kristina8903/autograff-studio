@@ -18,16 +18,22 @@ exact approved wording, can be scheduled and published.
 databases, `@autograff.ai`-only invites, founder approval, and a budget of
 **$100/month, all in**.
 
-**Phase 1 (application foundation) is built and tested locally**: invite-only
-sign-in, admin and founder roles, two-factor sign-in for admins, founder
-profiles, and the database security rules. See the
-[Phase 1 report](docs/phase-reports/phase-1.md). Nothing is deployed, no
-cloud credentials have been created, and no DNS has been changed.
+**Phase 1 (application foundation) is built and running on staging**
+(https://autograff-studio.vercel.app): invite-only sign-in, admin and founder
+roles, two-factor sign-in for admins, founder profiles, and the database
+security rules. See the [Phase 1 report](docs/phase-reports/phase-1.md) and
+the [staging runbook](docs/runbooks/staging-setup.md). No production
+deployment exists and no DNS has been changed.
+
+**Phase 2 (monthly strategy and cadence) is built and tested**: versioned
+monthly briefs, each founder's publishing cadence, the publishing calendar and
+slot coverage. See the [Phase 2 report](docs/phase-reports/phase-2.md).
 
 | Area | Status |
 |---|---|
 | Product spec, architecture, data model, security, integrations, phases, decisions | Drafted, in [`docs/`](docs/) |
-| Application, auth, database | **Built locally** (Phase 1); not deployed |
+| Application, auth, database | **Built** (Phase 1); on staging |
+| Briefs, cadence, calendar | **Built** (Phase 2) |
 | AI generation | Not started (Phase 4) |
 | Web research | Not started (Phase 5); provider not chosen |
 | Slack integration | Not started (Phase 6); access and terms **not verified** |

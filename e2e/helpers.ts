@@ -63,3 +63,19 @@ export async function accessTokenFrom(page: Page): Promise<string> {
     : decodeURIComponent(raw);
   return (JSON.parse(json) as { access_token: string }).access_token;
 }
+
+/**
+ * Signs the admin in, enrolling an authenticator the first time (the secret is
+ * kept in `mfa` for later sign-ins in the same file).
+ */
+export async function signInAdmin(page: Page, email: string, mfa: { secret: string }) {
+  await signInWithCode(page, email);
+  await expect(page).toHaveURL(/\/mfa$/);
+  if (!mfa.secret) {
+    await page.getByRole("button", { name: "Set up an authenticator app" }).click();
+    mfa.secret = (await page.getByTestId("totp-secret").textContent()) ?? "";
+  }
+  await page.getByLabel("6-digit code from your app").fill(await freshTotp(mfa.secret));
+  await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+}

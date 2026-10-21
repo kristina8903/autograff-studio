@@ -328,6 +328,34 @@ If spend runs high, the levers are, in order:
 - **Consequence.** Every page renders per request (also needed for the CSP
   nonce). Revisit only if page speed becomes a problem.
 
+### D-23: Where slot dates and coverage are computed. **Decided in Phase 2 (2026-10-21)**
+
+- **Context.** The plan put coverage in one SQL view, and slot generation
+  could live in SQL or TypeScript.
+- **Decision.** Slot dates are computed by pure TypeScript
+  (`lib/domain/cadence.ts`), which is unit-tested against hand-computed
+  fixtures. The database still enforces the rules: `sync_calendar_slots`
+  rejects any slot on a date with no rule in effect, only adds or removes
+  open, future, cadence-generated slots, and is idempotent through the unique
+  `(founder_id, slot_date, ordinal)` key. Coverage counts slots in SQL
+  (`coverage_slot_counts`); the full formula lives in
+  `lib/domain/coverage.ts` with the draft buckets at zero, and a test checks
+  that both give the same counts. The single `app.coverage` view is built in
+  Phase 4, when there are drafts to count.
+- **Consequence.** Date arithmetic is tested where it is easiest to read and
+  check, and planning cannot put a slot outside the cadence. Planning is an
+  explicit admin action ("Plan slots for {month}"), also run automatically for
+  the affected months when a cadence changes.
+
+### D-24: Moving and skipping slots. **Decided in Phase 2 (2026-10-21)**
+
+- **Decision.** Skipping keeps the row with status `skipped`, which does not
+  count toward the month's required slots. Moving a cadence slot skips it and
+  adds a manual slot on the new date. Manual slots can be removed; cadence
+  slots can only be skipped. Only slots dated today or later can change.
+- **Consequence.** Re-planning never brings back a slot the admin skipped or
+  moved, and the history of what changed stays in the table and audit log.
+
 ---
 
 ## 3. Inputs still needed from the user
@@ -347,4 +375,5 @@ If spend runs high, the levers are, in order:
 |---|---|
 | 2026-10-21 | Phase 0 draft created |
 | 2026-10-21 | Phase 1 built locally; D-22 added |
+| 2026-10-21 | Phase 2 built; D-23, D-24 added |
 | 2026-10-21 | User answers recorded: D-01, D-02, D-04, D-11, D-13, D-14, D-19 accepted; D-09, D-10 accepted on recommendation; D-15 deferred to Phase 3; D-16 and D-21 set by the $100/month budget |

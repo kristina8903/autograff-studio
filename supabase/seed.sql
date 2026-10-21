@@ -52,3 +52,23 @@ values
   ('00000000-0000-4000-8000-0000000000f1', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000c1', 'CEO', 'Local CEO', 'America/Los_Angeles'),
   ('00000000-0000-4000-8000-0000000000f2', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000c2', 'CTO', 'Local CTO', 'America/Los_Angeles'),
   ('00000000-0000-4000-8000-0000000000f3', '00000000-0000-4000-8000-000000000001', null, 'COO', 'Local COO', 'America/Los_Angeles');
+
+-- Phase 2: default cadences (docs/PRODUCT_SPEC.md §2.3) as data, and a sample brief.
+insert into public.cadence_rules (
+  company_id, founder_id, effective_from, period, min_posts, max_posts, publishing_days,
+  reserved_timely_slots_per_month, buffer_target, low_buffer_threshold, candidate_target_min, candidate_target_max, change_reason
+) values
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000f1', '2026-01-01', 'week', 2, 3, '{2,3,4}', 1, 3, 2, 16, 20, 'Initial default'),
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000f2', '2026-01-01', 'month', 2, 2, '{2,3,4}', 0, 1, 1, 4, 6, 'Initial default'),
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000f3', '2026-01-01', 'week', 2, 3, '{2,3,4}', 1, 3, 2, 16, 20, 'Initial default');
+
+insert into public.monthly_briefs (id, company_id, month, title)
+values ('00000000-0000-4000-8000-0000000000b0', '00000000-0000-4000-8000-000000000001', '2026-11-01', 'November: operational uncertainty');
+insert into public.brief_versions (id, brief_id, company_id, version_no, content, founder_emphasis, approved_facts, change_note)
+values (
+  '00000000-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-0000000000b0', '00000000-0000-4000-8000-000000000001', 1,
+  '{"theme": "Operational uncertainty in vehicle repair", "secondaryThemes": [], "objectives": ["Show why repair status visibility matters"], "audiences": ["Fleet operations leads", "Independent shop owners"], "coreArguments": [], "productUpdates": [], "industryDevelopments": [], "contentMix": [], "topicsToAvoid": ["Naming competitors"], "callsToAction": [], "datesAndEvents": [], "previousThemesToAvoid": []}',
+  '{"00000000-0000-4000-8000-0000000000f1": "Why software must help work progress, not just record it"}',
+  '[]', 'Seed'
+);
+update public.monthly_briefs set current_version_id = '00000000-0000-4000-8000-0000000000b1' where id = '00000000-0000-4000-8000-0000000000b0';
