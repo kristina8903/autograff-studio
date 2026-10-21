@@ -23,13 +23,13 @@ export function CodeForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(verifyCode, {});
   return (
     <form action={action} className="space-y-4">
-      <Field label="6-digit code">
+      <Field label="Code from the email">
         <Input
           name="code"
           inputMode="numeric"
           autoComplete="one-time-code"
           pattern="[0-9 ]*"
-          maxLength={7}
+          maxLength={9}
           required
           autoFocus
           className="text-center tracking-[0.4em]"

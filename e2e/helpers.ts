@@ -28,9 +28,9 @@ export async function signInWithCode(page: Page, email: string) {
   await page.getByRole("button", { name: "Email me a sign-in code" }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
   const { text } = await latestEmail(email, since);
-  const code = text.match(/\b(\d{6})\b/)?.[1];
+  const code = text.match(/\b(\d{6,8})\b/)?.[1];
   if (!code) throw new Error("No code in email");
-  await page.getByLabel("6-digit code").fill(code);
+  await page.getByLabel("Code from the email").fill(code);
   await page.getByRole("button", { name: "Sign in" }).click();
 }
 
