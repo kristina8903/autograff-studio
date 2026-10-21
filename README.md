@@ -29,11 +29,17 @@ deployment exists and no DNS has been changed.
 monthly briefs, each founder's publishing cadence, the publishing calendar and
 slot coverage. See the [Phase 2 report](docs/phase-reports/phase-2.md).
 
+**Phase 3 (founder voice and writing library) is built and tested**: versioned
+voice profiles, writing examples (including bulk paste of LinkedIn posts),
+example retrieval, and admin review of feedback. See the
+[Phase 3 report](docs/phase-reports/phase-3.md).
+
 | Area | Status |
 |---|---|
 | Product spec, architecture, data model, security, integrations, phases, decisions | Drafted, in [`docs/`](docs/) |
 | Application, auth, database | **Built** (Phase 1); on staging |
 | Briefs, cadence, calendar | **Built** (Phase 2) |
+| Voice profiles, writing examples, feedback | **Built** (Phase 3) |
 | AI generation | Not started (Phase 4) |
 | Web research | Not started (Phase 5); provider not chosen |
 | Slack integration | Not started (Phase 6); access and terms **not verified** |

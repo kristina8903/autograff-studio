@@ -184,6 +184,9 @@ drafts (only slots).
 
 ## Phase 3: Founder voice and writing library
 
+**Status:** built and tested locally, 2026-10-21. See the
+[Phase 3 report](phase-reports/phase-3.md).
+
 **Goal.** Each founder has an inspectable, editable, versioned voice profile
 and a library of writing examples that can be retrieved by relevance.
 

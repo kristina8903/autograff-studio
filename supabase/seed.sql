@@ -72,3 +72,40 @@ values (
   '[]', 'Seed'
 );
 update public.monthly_briefs set current_version_id = '00000000-0000-4000-8000-0000000000b1' where id = '00000000-0000-4000-8000-0000000000b0';
+
+-- Phase 3: a sample voice profile, writing examples and feedback signals.
+-- All text is invented local test data, not any founder's real writing.
+insert into public.voice_profiles (id, company_id, founder_id)
+values ('00000000-0000-4000-8000-0000000000d0', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000f1');
+insert into public.voice_profile_versions (
+  id, profile_id, company_id, founder_id, version_no, attributes, preferred_phrases, avoid_phrases,
+  expertise_topics, writing_habits, style_rules, format_preferences, notes, change_reason
+) values (
+  '00000000-0000-4000-8000-0000000000d1', '00000000-0000-4000-8000-0000000000d0', '00000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-0000000000f1', 1,
+  '{"sentenceLength": "varied", "paragraphStyle": "Two to four sentences per paragraph", "humor": "light", "technicalDepth": "medium", "pointOfView": "First person, plain and direct"}',
+  '{"Here is what we saw"}', '{"game-changer", "In today''s fast-paced world"}',
+  '{"repair operations", "fleet maintenance"}', '{"Ends with a question to the reader"}',
+  '{"No em-dashes"}', '{"story": "Open with the moment, not the lesson"}', '', 'Seed'
+);
+update public.voice_profiles set current_version_id = '00000000-0000-4000-8000-0000000000d1' where id = '00000000-0000-4000-8000-0000000000d0';
+
+insert into public.writing_examples (company_id, founder_id, kind, body, source_url, published_at, format, topics, approved_for_voice, eval_holdout) values
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000f1', 'published_linkedin',
+   'A fleet manager told me last week that the hardest part of a repair is not the repair. It is not knowing when the van comes back.',
+   'https://www.linkedin.com/posts/local-ceo-example-1', '2026-09-15', 'story', '{repair status,fleet maintenance}', true, false),
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000f1', 'published_linkedin',
+   'Three things every shop owner should track before buying software: cycle time, parts wait, and how often customers call to ask for updates.',
+   'https://www.linkedin.com/posts/local-ceo-example-2', '2026-08-02', 'list', '{repair operations,software}', true, false),
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000f1', 'approved_example',
+   'We used to think speed was the goal. It turns out predictability is what fleets pay for.',
+   null, null, 'opinion', '{fleet maintenance}', true, true),
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000f1', 'other',
+   'Draft notes, not for voice: pricing page ideas.', null, null, null, '{}', false, false),
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000f3', 'published_linkedin',
+   'Shop-floor throughput improves when everyone can see the same board. Here is how our team set one up.',
+   'https://www.linkedin.com/posts/local-coo-example-1', '2026-09-20', 'how_to', '{operations,repair operations}', true, false);
+
+insert into public.feedback_signals (company_id, founder_id, kind, format, statement, proposed_by) values
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000f1', 'stable_preference', null, 'Never open with a question.', 'admin'),
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000f1', 'one_off', null, 'Shorten the second paragraph of the October post.', 'admin');

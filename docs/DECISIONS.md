@@ -356,6 +356,48 @@ If spend runs high, the levers are, in order:
 - **Consequence.** Re-planning never brings back a slot the admin skipped or
   moved, and the history of what changed stays in the table and audit log.
 
+### D-25: How writing examples are retrieved. **Decided in Phase 3 (2026-10-21)**
+
+- **Context.** The plan called for full-text search plus format, topic and
+  recency matching, and needs the result to be testable.
+- **Decision.** Retrieval is a pure TypeScript function
+  (`lib/domain/retrieval.ts`). It loads a founder's examples (tens to a few
+  hundred) and scores each one:
+  3 × same format + 2 × shared topics + 2 × shared words + 1 × recency
+  (half weight after 180 days). Ties go to the newest, then the lowest id. The top
+  5 are used. The database decides what *may* be retrieved: RLS limits rows to
+  the founder, and only `approved_for_voice` examples that are not
+  `eval_holdout` are candidates. There is no Postgres `tsvector` column; it
+  would add an index to keep in step for no gain at this size.
+- **Consequence.** The ranking is unit-tested on hand-computed fixtures
+  (`tests/fixtures/retrieval/README.md`). The admin can see what generation
+  would use on each founder's examples page. Revisit if a founder has thousands
+  of examples.
+
+### D-26: Voice profile details. **Decided in Phase 3 (2026-10-21)**
+
+- **Style rules (D-15).** Each founder's agreed style rules, such as "No
+  em-dashes", are a list on their voice profile and override the company
+  default for that founder. The factual rules are not stored per founder,
+  because they always apply.
+- **Post formats** are one fixed list, shared by examples, format preferences
+  and (from Phase 4) concepts: story, opinion, how-to, data insight, lesson
+  learned, announcement, list, question, other.
+- **Founder-shared examples.** A founder can share their own writing from
+  their Voice page. It is saved as an `approved_example`, already approved for
+  voice, because sharing it is their consent (A-6). Founders cannot edit
+  their profile, other example settings, or feedback; they ask the admin.
+- **Feedback.** One-off and editorial signals can be accepted (recorded only)
+  or rejected. Stable and format preferences can be rejected, or accepted only
+  by saving a new profile version with them. The signal then records that
+  version. The database refuses any other link.
+- **Evaluation set.** An approved example can be marked "held out for
+  evaluation". It is then never retrieved, so it can be compared with
+  generated drafts.
+- **Deferred to Phase 4:** the `npm run eval:voice` model-scoring script and
+  the optional "draft a profile from examples" AI action. Both need the LLM
+  provider, which Phase 4 builds.
+
 ---
 
 ## 3. Inputs still needed from the user
@@ -365,7 +407,8 @@ If spend runs high, the levers are, in order:
    Phase 1.
 2. **Phase 1:** which Supabase organization owns the new projects, and which
    transactional email provider to use (free tier).
-3. **Phase 3:** each founder's style rules (D-15), agreed with the founder.
+3. **Phase 3:** each founder's style rules (D-15), agreed with the founder, and
+   entered on their voice profile.
 4. **Before Phase 6:** who reads the Slack terms (D-17); which channels.
 5. **Before Phase 10:** who does the LinkedIn terms review (D-18).
 
@@ -376,4 +419,5 @@ If spend runs high, the levers are, in order:
 | 2026-10-21 | Phase 0 draft created |
 | 2026-10-21 | Phase 1 built locally; D-22 added |
 | 2026-10-21 | Phase 2 built; D-23, D-24 added |
+| 2026-10-21 | Phase 3 built; D-25, D-26 added; D-15 implemented as per-founder style rules |
 | 2026-10-21 | User answers recorded: D-01, D-02, D-04, D-11, D-13, D-14, D-19 accepted; D-09, D-10 accepted on recommendation; D-15 deferred to Phase 3; D-16 and D-21 set by the $100/month budget |

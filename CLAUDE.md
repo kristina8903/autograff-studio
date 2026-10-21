@@ -32,8 +32,9 @@ the same change when behavior changes.
   next phase, or pull its features forward, without explicit approval.
 - **Current status: Phase 1 (application foundation) is built and deployed
   to staging (`docs/phase-reports/phase-1.md`). Phase 2 (monthly strategy and
-  cadence) is built and tested (2026-10-21; `docs/phase-reports/phase-2.md`).
-  Phase 3 is not approved to start.**
+  cadence) and Phase 3 (founder voice and writing library) are built and
+  tested (2026-10-21; `docs/phase-reports/`). Phase 4 is not approved to
+  start.**
 - Phase order is agreed (D-19): 1, 2, 3, 4, 7, 5, 9, 8, go-live, 6, 10.
 - End each phase with a report:
   - what was built;
