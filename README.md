@@ -40,7 +40,7 @@ example retrieval, and admin review of feedback. See the
 | Application, auth, database | **Built** (Phase 1); on staging |
 | Briefs, cadence, calendar | **Built** (Phase 2) |
 | Voice profiles, writing examples, feedback | **Built** (Phase 3) |
-| AI generation | Not started (Phase 4) |
+| AI generation | **In progress** (Phase 4): concepts built (4a); drafts next (4b) |
 | Web research | Not started (Phase 5); provider not chosen |
 | Slack integration | Not started (Phase 6); access and terms **not verified** |
 | LinkedIn publishing and analytics | Not started (Phase 10); access and terms **not verified**. Publishing is manual until then |

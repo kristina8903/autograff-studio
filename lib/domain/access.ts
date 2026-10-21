@@ -50,10 +50,14 @@ export function parseAuthLinkType(value: string | null | undefined): AuthLinkTyp
   return AUTH_LINK_TYPES.find((type) => type === value) ?? null;
 }
 
-/** Paths that never require a session. Everything else does. */
+/**
+ * Paths that never require a session. Everything else does. The job tick has
+ * no user session: it checks CRON_SECRET itself (app/api/jobs/tick/route.ts).
+ */
 export function isPublicPath(pathname: string): boolean {
   return (
     pathname === "/sign-in" ||
+    pathname === "/api/jobs/tick" ||
     pathname.startsWith("/sign-in/") ||
     pathname === "/auth/confirm" ||
     pathname === "/robots.txt"

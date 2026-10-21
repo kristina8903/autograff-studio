@@ -423,6 +423,65 @@ If spend runs high, the levers are, in order:
   several known names [S], and the error message lists the columns found so
   the parser can be updated. No scraping and no browser extension.
 
+### D-28: How AI runs execute and what they may spend. **Decided in Phase 4a (2026-10-21)**
+
+- **Ceilings live in the database.** `settings.ai_monthly_budget_usd`
+  (default $10, CHECK ≤ $50) and `settings.ai_per_run_ceiling_usd` (default
+  $2, CHECK ≤ $5).
+  - Signed-in users cannot change them: the admin's update right on
+    `settings` is limited to the email domains.
+  - Production's $50 is set once with SQL at go-live (runbook step 8).
+  - This replaces the `AI_*_USD` environment variables planned in Phase 0.
+- **Checked before any call.** `request_generation` locks the company's
+  settings row and compares the run's upper-bound estimate with the per-run
+  ceiling, and with the month's spend plus the estimate against the monthly
+  budget.
+  - The month's spend is actual cost, plus the estimate of runs still queued
+    or running.
+  - The estimate assumes about 3 characters per token (an overestimate) and
+    every output token up to the cap.
+  - An over-budget request is recorded as `refused`, with the reason, and
+    never runs.
+- **Execution.** A requested run starts right after the response (`after()`
+  in the server action).
+  - Vercel Cron calls `/api/jobs/tick` every minute with `CRON_SECRET`. The
+    tick picks up due retries and runs whose worker died (requeued after 10
+    minutes).
+  - Runs are claimed with `FOR UPDATE SKIP LOCKED`.
+  - Transient failures (429, 5xx, network) retry with backoff and jitter,
+    honoring `retry-after`, up to 3 attempts. Everything else fails at once,
+    with a sanitized message.
+  - Tokens billed by a failed attempt still count toward spend.
+- **Idempotency.** The key is a hash of the kind, founder, month, brief
+  version, concept (for a regeneration) and a nonce rendered into the form.
+  The same click submitted twice is one run.
+- **Refusals.** Requests use the API's server-side refusal fallback
+  (`fallbacks: "default"`): if the model declines, Anthropic re-runs the
+  request on its recommended fallback model.
+  - The run records which model actually answered.
+  - Each model's tokens are priced at that model's rate. A model missing
+    from the price table is priced at the most expensive known rate.
+  - A refusal can therefore cost a little more than the estimate. The next
+    request's budget check includes it.
+- **Structured output.** The answer is requested as JSON matching a Zod
+  schema (structured outputs), then validated again on arrival, including
+  the database's length limits. A malformed answer fails the run; it is
+  never partly stored.
+
+### D-29: Concepts in Phase 4a. **Decided 2026-10-21**
+
+- **Founders do not see concepts, runs or costs (D-13).**
+- **Regenerating a concept creates a new one.** The old one is archived and
+  linked to its replacement; nothing else in the batch changes.
+- **Editing a concept changes it in place.** The edit is recorded (who and
+  when) in the audit log, and its generated origin stays on the run. Drafts,
+  not concepts, carry full version history.
+- **`concept_evidence` is deferred to Phase 5**, when findings and insights
+  exist to link. Until then a concept lists the evidence it needs as text.
+- **Batch size.** The suggested count is the founder's
+  `candidate_target_max` minus their live concepts, capped at 8 per batch.
+  At most 10 can be asked for.
+
 ---
 
 ## 3. Inputs still needed from the user
@@ -446,4 +505,5 @@ If spend runs high, the levers are, in order:
 | 2026-10-21 | Phase 2 built; D-23, D-24 added |
 | 2026-10-21 | Phase 3 built; D-25, D-26 added; D-15 implemented as per-founder style rules |
 | 2026-10-21 | LinkedIn export import; D-27 added |
+| 2026-10-21 | Phase 4a built; D-28, D-29 added |
 | 2026-10-21 | User answers recorded: D-01, D-02, D-04, D-11, D-13, D-14, D-19 accepted; D-09, D-10 accepted on recommendation; D-15 deferred to Phase 3; D-16 and D-21 set by the $100/month budget |

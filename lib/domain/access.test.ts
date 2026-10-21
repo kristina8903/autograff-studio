@@ -79,10 +79,20 @@ describe("routing helpers", () => {
     expect(parseAuthLinkType("signup")).toBeNull();
     expect(parseAuthLinkType(null)).toBeNull();
   });
-  it("keeps only sign-in and link confirmation public", () => {
-    for (const path of ["/sign-in", "/sign-in/verify", "/auth/confirm", "/robots.txt"])
+  it("keeps only sign-in, link confirmation and the secret-protected job tick public", () => {
+    for (const path of ["/sign-in", "/sign-in/verify", "/auth/confirm", "/robots.txt", "/api/jobs/tick"])
       expect(isPublicPath(path), path).toBe(true);
-    for (const path of ["/", "/admin", "/dashboard", "/mfa", "/auth/sign-out", "/sign-inx", "/auth/confirmed"]) {
+    for (const path of [
+      "/",
+      "/admin",
+      "/dashboard",
+      "/mfa",
+      "/auth/sign-out",
+      "/sign-inx",
+      "/auth/confirmed",
+      "/api/jobs",
+      "/api/jobs/tick/x",
+    ]) {
       expect(isPublicPath(path), path).toBe(false);
     }
   });
