@@ -398,6 +398,31 @@ If spend runs high, the levers are, in order:
   the optional "draft a profile from examples" AI action. Both need the LLM
   provider, which Phase 4 builds.
 
+### D-27: Bringing in founders' LinkedIn posts. **Decided 2026-10-21:** import the founder's own data export
+
+- **Context.** Pasting posts by hand is slow. LinkedIn's API does not offer
+  reading a member's own posts without partner approval [S], and scraping
+  breaks LinkedIn's user agreement.
+- **Decision.** The admin uploads the founder's own LinkedIn data export
+  (Settings → Data privacy → Get a copy of your data). It can be the export
+  ZIP (posts-only or the full archive) or `Shares.csv` itself. The file is
+  opened **in the browser**:
+  - From a ZIP, only the archive's file list and `Shares.csv` are read
+    (`lib/browser/zip.ts`). Messages and every other file are never
+    decompressed. A test proves this with a deliberately corrupt
+    `messages.csv`.
+  - Only post text, link and date are sent, in batches of 50. The rest of
+    the export never leaves the device.
+  - Reposts with no text of their own are skipped, and so are posts already
+    in the library.
+  - Only the post-commentary column is read. A file without one, such as
+    the export's `messages.csv`, is refused, and the error lists the columns
+    found.
+- **Consequence.** Free, consented, and no LinkedIn app is needed. LinkedIn
+  changes the export's column names from time to time. The parser matches
+  several known names [S], and the error message lists the columns found so
+  the parser can be updated. No scraping and no browser extension.
+
 ---
 
 ## 3. Inputs still needed from the user
@@ -420,4 +445,5 @@ If spend runs high, the levers are, in order:
 | 2026-10-21 | Phase 1 built locally; D-22 added |
 | 2026-10-21 | Phase 2 built; D-23, D-24 added |
 | 2026-10-21 | Phase 3 built; D-25, D-26 added; D-15 implemented as per-founder style rules |
+| 2026-10-21 | LinkedIn export import; D-27 added |
 | 2026-10-21 | User answers recorded: D-01, D-02, D-04, D-11, D-13, D-14, D-19 accepted; D-09, D-10 accepted on recommendation; D-15 deferred to Phase 3; D-16 and D-21 set by the $100/month budget |

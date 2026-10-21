@@ -89,7 +89,7 @@ corrected. The code was not changed for either.
 1. Check that the "Migrate staging database" workflow run on `main` is green.
 2. **Voice**: open a founder and write their first profile. Include the style
    rules you agree with them, such as "No em-dashes".
-3. With the founder's consent, open **Writing examples** and paste their
-   LinkedIn posts. Mark a few good ones as "Held out for evaluation" (5–10
+3. With the founder's consent, open **Writing examples** and import their
+   LinkedIn data export (`Shares.csv`; D-27) or paste their posts. Mark a few good ones as "Held out for evaluation" (5–10
    per founder) so Phase 4 can check drafts against them.
 4. Use "Which examples would the AI see?" to check the matches look right.

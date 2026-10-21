@@ -188,3 +188,42 @@ export async function reviewFeedbackAction(_state: ActionState, form: FormData):
   revalidatePath("/admin/feedback");
   return { message: decision === "accept" ? "Accepted." : "Rejected." };
 }
+
+// ---------------------------------------------------------------------------
+// LinkedIn export import
+// ---------------------------------------------------------------------------
+
+/** Largest batch the browser sends per call; keeps each request well under the 1 MB action limit. */
+const IMPORT_BATCH = 50;
+
+/**
+ * Adds one batch of posts read from a LinkedIn export in the browser
+ * (lib/domain/linkedin-export.ts). Every field is checked again here.
+ */
+export async function importPostsAction(
+  founderId: string,
+  posts: { body: string; sourceUrl: string | null; publishedAt: string | null }[],
+  approved: boolean,
+): Promise<{ added: number; duplicates: number } | { error: string }> {
+  await requireAdmin();
+  if (!Array.isArray(posts) || posts.length === 0 || posts.length > IMPORT_BATCH) return { error: "Bad batch." };
+  const items: Json[] = [];
+  for (const post of posts) {
+    const body = typeof post?.body === "string" ? post.body.trim() : "";
+    if (!body || body.length > MAX_EXAMPLE_LENGTH) return { error: "A post is empty or too long." };
+    const url = typeof post.sourceUrl === "string" && isHttpsUrl(post.sourceUrl) ? post.sourceUrl : null;
+    const date = typeof post.publishedAt === "string" && isIsoDate(post.publishedAt) ? post.publishedAt : null;
+    items.push({
+      kind: "published_linkedin",
+      body,
+      source_url: url,
+      published_at: date,
+      approved_for_voice: approved === true,
+    });
+  }
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("add_writing_examples", { p_founder_id: founderId, p_items: items });
+  if (error) return { error: "The posts could not be added." };
+  revalidatePath(`/admin/voice/${founderId}/examples`);
+  return data as { added: number; duplicates: number };
+}
