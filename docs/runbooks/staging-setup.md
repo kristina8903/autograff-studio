@@ -40,7 +40,15 @@ green first.
 1. In Autograff's existing Vercel Pro team: **Add New → Project → Import**
    `kristina8903/autograff-studio`. If the repository is not listed, give the
    Vercel GitHub app access to it when Vercel asks.
+   - The project must live in the **Pro team**, never a personal Hobby
+     account: Hobby is for non-commercial use only [S].
+   - If your team role can't create projects, either ask the team owner to
+     change your role, or create the project in your Hobby account and move it
+     with Project → Settings → General → **Transfer** (done this way on
+     2026-10-21). Environment variables and the Git connection move with it.
 2. Framework: Next.js (detected). Leave the build settings at their defaults.
+   The build succeeds without the environment variables. The site then shows
+   an error until they are set, because the app refuses to run unconfigured.
 3. Add these **Environment Variables**, for both Production and Preview:
 
    | Name | Value |
