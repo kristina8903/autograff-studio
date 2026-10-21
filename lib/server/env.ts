@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { parseEnv } from "@/lib/env";
 
 const serverEnvSchema = z.object({
   SUPABASE_SECRET_KEY: z
@@ -11,7 +12,7 @@ const serverEnvSchema = z.object({
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
 export function parseServerEnv(source: Record<string, string | undefined>): ServerEnv {
-  return serverEnvSchema.parse({ SUPABASE_SECRET_KEY: source.SUPABASE_SECRET_KEY });
+  return parseEnv(serverEnvSchema, { SUPABASE_SECRET_KEY: source.SUPABASE_SECRET_KEY });
 }
 
 /** Server-only secrets. Fails fast with a clear message when misconfigured. */
