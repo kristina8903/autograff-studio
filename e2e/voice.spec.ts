@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
+import { buildZip } from "../tests/zip-fixture";
 import { accessTokenFrom, signInAdmin, signInWithCode, SUPABASE_URL } from "./helpers";
 
 // Phase 3 acceptance criteria (docs/PHASES.md) as one ordered story.
@@ -95,7 +96,7 @@ test("a LinkedIn export imports its posts, skipping reposts and posts already in
     '2026-09-20 08:00:00,https://www.linkedin.com/posts/local-coo-example-1,"Shop-floor throughput improves when everyone can see the same board. Here is how our team set one up.",,,MEMBER_NETWORK',
   ].join("\n");
   await admin
-    .getByLabel("LinkedIn export file (Shares.csv)")
+    .getByLabel("LinkedIn export (ZIP or Shares.csv)")
     .setInputFiles({ name: "Shares.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
   const preview = admin.getByRole("region", { name: "Import preview" });
   await expect(preview).toContainText("Found 3 posts, plus 1 repost(s) with no text of their own (skipped).");
@@ -108,9 +109,34 @@ test("a LinkedIn export imports its posts, skipping reposts and posts already in
   await expect(examples.getByRole("row").filter({ hasText: "Throughput is a team sport." })).toContainText("approved");
 });
 
+test("a full LinkedIn archive imports only its posts, never its messages", async () => {
+  await admin.goto(`/admin/voice/${COO}/examples`);
+  const zip = buildZip([
+    {
+      name: "messages.csv",
+      data: "CONVERSATION ID,FROM,TO,DATE,SUBJECT,CONTENT\n1,A,B,2026-01-01,Hi,A private message that must stay private",
+    },
+    { name: "Connections.csv", data: "First Name,Last Name\nAda,Lovelace" },
+    {
+      name: "Shares.csv",
+      data: 'Date,ShareLink,ShareCommentary\n2026-08-01 08:00:00,https://www.linkedin.com/posts/coo-zip,"A post from the full archive."',
+    },
+  ]);
+  await admin
+    .getByLabel("LinkedIn export (ZIP or Shares.csv)")
+    .setInputFiles({ name: "Complete_LinkedInDataExport.zip", mimeType: "application/zip", buffer: zip });
+  const preview = admin.getByRole("region", { name: "Import preview" });
+  await expect(preview).toContainText("Found 1 post.");
+  await preview.getByRole("button", { name: "Import 1 post" }).click();
+  await expect(admin.getByText("Imported 1 post.")).toBeVisible();
+  const examples = admin.getByRole("table", { name: "Examples" });
+  await expect(examples).toContainText("A post from the full archive.");
+  await expect(examples).not.toContainText("must stay private");
+});
+
 test("a file that is not the posts export is refused, showing its columns", async () => {
   await admin.goto(`/admin/voice/${COO}/examples`);
-  await admin.getByLabel("LinkedIn export file (Shares.csv)").setInputFiles({
+  await admin.getByLabel("LinkedIn export (ZIP or Shares.csv)").setInputFiles({
     name: "messages.csv",
     mimeType: "text/csv",
     buffer: Buffer.from("CONVERSATION ID,FROM,TO,DATE,SUBJECT,CONTENT\n1,A,B,2026-01-01,Hi,Private text"),

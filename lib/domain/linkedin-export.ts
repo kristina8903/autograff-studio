@@ -17,7 +17,6 @@ const LINK_COLUMNS = ["sharelink", "postlink", "permalink", "link", "url"];
 const DATE_COLUMNS = ["date", "sharedate", "createddate", "publisheddate", "postdate"];
 
 export const MAX_IMPORT_POSTS = 2000;
-export const MAX_EXPORT_FILE_BYTES = 10 * 1024 * 1024;
 
 export type LinkedInImport = {
   posts: PastedExample[];
@@ -60,8 +59,7 @@ export function parseLinkedInExport(csv: string): LinkedInImport {
   const result: LinkedInImport = { posts: [], withoutText: 0, tooLong: 0, columns: [], error: null };
   if (headerIndex < 0) {
     result.columns = (rows.find((row) => row.some((cell) => cell.trim())) ?? []).map((c) => c.trim()).slice(0, 20);
-    result.error =
-      "This doesn't look like the posts file from a LinkedIn export. Choose Shares.csv from the export's folder.";
+    result.error = "This doesn't look like the posts file from a LinkedIn export. Choose the export ZIP or Shares.csv.";
     return result;
   }
   const header = rows[headerIndex];

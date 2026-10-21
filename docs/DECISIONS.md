@@ -403,10 +403,16 @@ If spend runs high, the levers are, in order:
 - **Context.** Pasting posts by hand is slow. LinkedIn's API does not offer
   reading a member's own posts without partner approval [S], and scraping
   breaks LinkedIn's user agreement.
-- **Decision.** The admin uploads `Shares.csv` from the founder's own LinkedIn
-  data export (Settings → Data privacy → Get a copy of your data). The file
-  is parsed **in the browser**: only post text, link and date are sent, in
-  batches of 50, and the rest of the export never leaves the device.
+- **Decision.** The admin uploads the founder's own LinkedIn data export
+  (Settings → Data privacy → Get a copy of your data). It can be the export
+  ZIP (posts-only or the full archive) or `Shares.csv` itself. The file is
+  opened **in the browser**:
+  - From a ZIP, only the archive's file list and `Shares.csv` are read
+    (`lib/browser/zip.ts`). Messages and every other file are never
+    decompressed. A test proves this with a deliberately corrupt
+    `messages.csv`.
+  - Only post text, link and date are sent, in batches of 50. The rest of
+    the export never leaves the device.
   - Reposts with no text of their own are skipped, and so are posts already
     in the library.
   - Only the post-commentary column is read. A file without one, such as

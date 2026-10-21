@@ -3,12 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Alert, Button, Field, Input } from "@/components/ui";
-import {
-  MAX_EXPORT_FILE_BYTES,
-  MAX_IMPORT_POSTS,
-  parseLinkedInExport,
-  type LinkedInImport,
-} from "@/lib/domain/linkedin-export";
+import { readPostsFile } from "@/lib/browser/linkedin-file";
+import { MAX_IMPORT_POSTS, parseLinkedInExport, type LinkedInImport } from "@/lib/domain/linkedin-export";
 import { importPostsAction } from "../../../voice-actions";
 
 const BATCH = 50;
@@ -27,9 +23,11 @@ export function ImportExportForm({ founderId }: { founderId: string }) {
     setOutcome(null);
     setFileError(null);
     if (!file) return;
-    if (file.size > MAX_EXPORT_FILE_BYTES) return setFileError("That file is larger than 10 MB. Choose Shares.csv.");
-    // The file is read here in the browser; only the posts are sent to the server.
-    setParsed(parseLinkedInExport(await file.text()));
+    // Read here in the browser. From a ZIP, only Shares.csv is decompressed:
+    // messages and every other file in the archive are never read.
+    const result = await readPostsFile(file);
+    if ("error" in result) return setFileError(result.error);
+    setParsed(parseLinkedInExport(result.csv));
   }
 
   function run() {
@@ -64,14 +62,15 @@ export function ImportExportForm({ founderId }: { founderId: string }) {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted">
-        On LinkedIn: Settings → Data privacy → Get a copy of your data. Choose the posts (or the full archive), download
-        the ZIP when LinkedIn emails it, unzip it, and pick <strong>Shares.csv</strong>. The file is read in this
-        browser; only the posts are uploaded.
+        On LinkedIn: Settings → Data privacy → Get a copy of your data. Either the posts-only download or the full
+        archive works. Choose the ZIP LinkedIn emails, or Shares.csv from inside it. The file is opened in this browser,
+        and only <strong>Shares.csv</strong> is read. Messages and everything else in the archive are never opened, and
+        only the posts are uploaded.
       </p>
-      <Field label="LinkedIn export file (Shares.csv)">
+      <Field label="LinkedIn export (ZIP or Shares.csv)">
         <Input
           type="file"
-          accept=".csv,text/csv"
+          accept=".zip,.csv,application/zip,text/csv"
           onChange={(event) => void choose(event.target.files?.[0])}
           disabled={pending}
         />
@@ -101,7 +100,9 @@ export function ImportExportForm({ founderId }: { founderId: string }) {
             voice
           </label>
           <Button type="button" onClick={run} disabled={pending || parsed.posts.length === 0}>
-            {pending ? (progress ?? "Importing…") : `Import ${parsed.posts.length} posts`}
+            {pending
+              ? (progress ?? "Importing…")
+              : `Import ${parsed.posts.length} post${parsed.posts.length === 1 ? "" : "s"}`}
           </Button>
         </section>
       ) : null}
