@@ -46,7 +46,10 @@ green first.
      change your role, or create the project in your Hobby account and move it
      with Project → Settings → General → **Transfer** (done this way on
      2026-10-21). Environment variables and the Git connection move with it.
-2. Framework: Next.js (detected). Leave the build settings at their defaults.
+2. Framework: `vercel.json` pins it to Next.js. If the project was created
+   before `main` had the app, the dashboard may still say "Other"; the file
+   overrides that (without it, builds fail with `No Output Directory named
+   "public"`). Leave the build, output and install settings at their defaults.
    The build succeeds without the environment variables. The site then shows
    an error until they are set, because the app refuses to run unconfigured.
 3. Add these **Environment Variables**, for both Production and Preview:
