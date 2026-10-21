@@ -30,9 +30,10 @@ the same change when behavior changes.
 - `docs/PHASES.md` defines the phases, their scope, exclusions and acceptance
   criteria. Work only on the phase the user has approved. Do not start the
   next phase, or pull its features forward, without explicit approval.
-- **Current status: Phase 0 (planning) is complete and its decisions are
-  recorded (2026-10-21). No application code exists. Phase 1 is not yet
-  approved to start.**
+- **Current status: Phase 1 (application foundation) is built and tested
+  locally (2026-10-21; `docs/phase-reports/phase-1.md`). Its staging deploy
+  waits on the Vercel project, staging Supabase project and email sender.
+  Phase 2 is not approved to start.**
 - Phase order is agreed (D-19): 1, 2, 3, 4, 7, 5, 9, 8, go-live, 6, 10.
 - End each phase with a report:
   - what was built;
@@ -69,18 +70,23 @@ the same change when behavior changes.
   - Match existing code.
   - User-facing copy is US English.
 
-## Commands (to be created in Phase 1; they do not exist yet)
+## Commands
 
 ```bash
+npm run db:start       # local Supabase (Docker): Postgres, Auth, mail catcher on :54324
+npm run env:local      # write .env.local from the local stack
 npm run dev            # local app on http://localhost:3000
-npm run typecheck      # tsc --noEmit
-npm run lint           # eslint
-npm run format:check   # prettier --check
-npm test               # vitest unit tests (domain + providers with fakes)
-npm run test:db        # RLS/function tests against local Supabase (supabase start first)
-npm run test:e2e       # playwright
-npx supabase start && npx supabase db reset   # local DB with migrations + seed
+npm run check          # typecheck (next typegen + tsc) + lint (incl. public-env check) + format + unit tests
+npm run test:db        # pgTAP access-control tests against the local stack
+npm run test:e2e       # Playwright: builds, serves, resets the local DB, runs browser tests
+npm run db:reset       # re-apply migrations + seed
+npm run db:types       # regenerate lib/supabase/database.types.ts after a migration
 ```
+
+Next.js 16 conventions used here: `proxy.ts` (not middleware), Cache
+Components **off** (D-22), every page rendered per request (the CSP nonce
+needs it). Supabase `[auth.email] enable_signup` is the email provider's
+on/off switch; sign-ups are blocked by `[auth] enable_signup = false`.
 
 All of these must pass before a pull request. Report the results, including
 failures.

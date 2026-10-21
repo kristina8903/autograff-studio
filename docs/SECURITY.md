@@ -55,6 +55,26 @@ Decisions that need human approval are listed in §16.
 - Auth emails are sent through custom SMTP (§7.2 of ARCHITECTURE) with
   SPF, DKIM and DMARC.
 
+### 3.1 As built in Phase 1 (verified locally, 2026-10-21)
+
+- Sign-in uses a 6-digit email code. Email links open a confirmation page and
+  are spent only when the person presses Continue (a POST), so link-scanning
+  email filters cannot use them up.
+- The sign-in form gives the same response whether or not an address has an
+  account.
+- Public sign-up is refused by Auth (`signup_disabled`). The domain rule is
+  enforced in three places: the invite code, the Auth hook, and a trigger on
+  `auth.users` that covers every creation path.
+- Admin rights in the database require `aal2`. An admin who has not completed
+  the MFA challenge has no admin access, even through the API.
+- Pages send a per-request nonce CSP with no `unsafe-inline` for scripts or
+  styles. The browser tests fail on any CSP violation. Other headers sent:
+  - `frame-ancestors 'none'` / `X-Frame-Options: DENY`;
+  - `X-Robots-Tag: noindex, nofollow`;
+  - `Cache-Control: private, no-store`;
+  - HSTS and `upgrade-insecure-requests` when the app URL is HTTPS.
+- Error pages never show error details.
+
 ## 4. Authorization: server and database
 
 There are two independent layers, and both must agree:

@@ -10,3 +10,7 @@ supabase/.temp/
 # env files: only the placeholder example is committed
 .env*
 !.env.example
+# test output
+playwright-report/
+test-results/
+supabase/.branches/
