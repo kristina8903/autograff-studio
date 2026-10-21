@@ -65,6 +65,235 @@ export type Database = {
           },
         ];
       };
+      brief_versions: {
+        Row: {
+          approved_facts: NonNullable<Json>;
+          brief_id: string;
+          change_note: string;
+          company_id: string;
+          content: NonNullable<Json>;
+          created_at: string;
+          created_by: string | null;
+          founder_emphasis: NonNullable<Json>;
+          id: string;
+          version_no: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          approved_facts?: NonNullable<Json>;
+          brief_id: string;
+          change_note?: string;
+          company_id: string;
+          content: NonNullable<Json>;
+          created_at?: string;
+          created_by?: string | null;
+          founder_emphasis?: NonNullable<Json>;
+          id?: string;
+          version_no: number;
+        };
+        Update: {
+          approved_facts?: NonNullable<Json>;
+          brief_id?: string;
+          change_note?: string;
+          company_id?: string;
+          content?: NonNullable<Json>;
+          created_at?: string;
+          created_by?: string | null;
+          founder_emphasis?: NonNullable<Json>;
+          id?: string;
+          version_no?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "brief_versions_brief_id_fkey";
+            columns: ["brief_id"];
+            isOneToOne: false;
+            referencedRelation: "monthly_briefs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "brief_versions_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "brief_versions_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      cadence_rules: {
+        Row: {
+          buffer_target: number;
+          candidate_target_max: number;
+          candidate_target_min: number;
+          change_reason: string;
+          company_id: string;
+          created_at: string;
+          created_by: string | null;
+          effective_from: string;
+          effective_to: string | null;
+          founder_id: string;
+          id: string;
+          low_buffer_threshold: number;
+          max_posts: number;
+          min_posts: number;
+          period: Database["public"]["Enums"]["cadence_period"];
+          preferred_local_time: string | null;
+          publishing_days: number[];
+          reserved_timely_slots_per_month: number;
+          weekly_pattern: number[] | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          buffer_target?: number;
+          candidate_target_max?: number;
+          candidate_target_min?: number;
+          change_reason?: string;
+          company_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          effective_from: string;
+          effective_to?: string | null;
+          founder_id: string;
+          id?: string;
+          low_buffer_threshold?: number;
+          max_posts: number;
+          min_posts: number;
+          period: Database["public"]["Enums"]["cadence_period"];
+          preferred_local_time?: string | null;
+          publishing_days: number[];
+          reserved_timely_slots_per_month?: number;
+          weekly_pattern?: number[] | null;
+        };
+        Update: {
+          buffer_target?: number;
+          candidate_target_max?: number;
+          candidate_target_min?: number;
+          change_reason?: string;
+          company_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          effective_from?: string;
+          effective_to?: string | null;
+          founder_id?: string;
+          id?: string;
+          low_buffer_threshold?: number;
+          max_posts?: number;
+          min_posts?: number;
+          period?: Database["public"]["Enums"]["cadence_period"];
+          preferred_local_time?: string | null;
+          publishing_days?: number[];
+          reserved_timely_slots_per_month?: number;
+          weekly_pattern?: number[] | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cadence_rules_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cadence_rules_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "cadence_rules_founder_id_fkey";
+            columns: ["founder_id"];
+            isOneToOne: false;
+            referencedRelation: "founders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      calendar_slots: {
+        Row: {
+          cadence_rule_id: string | null;
+          company_id: string;
+          created_at: string;
+          created_by: string | null;
+          draft_id: string | null;
+          founder_id: string;
+          id: string;
+          kind: Database["public"]["Enums"]["slot_kind"];
+          note: string;
+          ordinal: number;
+          slot_date: string;
+          status: Database["public"]["Enums"]["slot_status"];
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          cadence_rule_id?: string | null;
+          company_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          draft_id?: string | null;
+          founder_id: string;
+          id?: string;
+          kind: Database["public"]["Enums"]["slot_kind"];
+          note?: string;
+          ordinal?: number;
+          slot_date: string;
+          status?: Database["public"]["Enums"]["slot_status"];
+          updated_at?: string;
+        };
+        Update: {
+          cadence_rule_id?: string | null;
+          company_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          draft_id?: string | null;
+          founder_id?: string;
+          id?: string;
+          kind?: Database["public"]["Enums"]["slot_kind"];
+          note?: string;
+          ordinal?: number;
+          slot_date?: string;
+          status?: Database["public"]["Enums"]["slot_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "calendar_slots_cadence_rule_id_fkey";
+            columns: ["cadence_rule_id"];
+            isOneToOne: false;
+            referencedRelation: "cadence_rules";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "calendar_slots_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "calendar_slots_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "calendar_slots_founder_id_fkey";
+            columns: ["founder_id"];
+            isOneToOne: false;
+            referencedRelation: "founders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       companies: {
         Row: {
           created_at: string;
@@ -215,6 +444,62 @@ export type Database = {
           },
         ];
       };
+      monthly_briefs: {
+        Row: {
+          company_id: string;
+          created_at: string;
+          created_by: string | null;
+          current_version_id: string | null;
+          id: string;
+          month: string;
+          title: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          company_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          current_version_id?: string | null;
+          id?: string;
+          month: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Update: {
+          company_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          current_version_id?: string | null;
+          id?: string;
+          month?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "monthly_briefs_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "monthly_briefs_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "monthly_briefs_current_version_fk";
+            columns: ["current_version_id"];
+            isOneToOne: false;
+            referencedRelation: "brief_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           activated_at: string | null;
@@ -315,10 +600,33 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      add_manual_slot: {
+        Args: { p_date: string; p_founder_id: string; p_note: string; p_today: string };
+        Returns: string;
+      };
       admin_deactivate_user: { Args: { p_user_id: string }; Returns: undefined };
       admin_set_user_role: {
         Args: { p_role: Database["public"]["Enums"]["user_role"]; p_user_id: string };
         Returns: undefined;
+      };
+      coverage_slot_counts: {
+        Args: { p_founder_id: string; p_month: string };
+        Returns: {
+          filled: number;
+          open: number;
+          required: number;
+          reserved_timely: number;
+          skipped: number;
+        }[];
+      };
+      founder_brief: {
+        Args: { p_month: string };
+        Returns: {
+          emphasis: string;
+          month: string;
+          theme: string;
+          version_no: number;
+        }[];
       };
       provision_invited_user: {
         Args: {
@@ -330,9 +638,50 @@ export type Database = {
         Returns: undefined;
       };
       record_sign_in: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Enums"]["user_status"] };
+      save_brief_version: {
+        Args: {
+          p_approved_facts: Json;
+          p_change_note: string;
+          p_content: Json;
+          p_founder_emphasis: Json;
+          p_month: string;
+          p_title: string;
+        };
+        Returns: number;
+      };
+      set_cadence_rule: {
+        Args: {
+          p_buffer_target: number;
+          p_candidate_target_max: number;
+          p_candidate_target_min: number;
+          p_change_reason: string;
+          p_effective_from: string;
+          p_founder_id: string;
+          p_low_buffer_threshold: number;
+          p_max_posts: number;
+          p_min_posts: number;
+          p_period: Database["public"]["Enums"]["cadence_period"];
+          p_publishing_days: number[];
+          p_reserved_timely: number;
+          p_today: string;
+          p_weekly_pattern: number[];
+        };
+        Returns: string;
+      };
+      sync_calendar_slots: {
+        Args: { p_founder_id: string; p_month: string; p_slots: Json; p_today: string };
+        Returns: Json;
+      };
+      update_slot: {
+        Args: { p_action: string; p_new_date: string; p_slot_id: string; p_today: string };
+        Returns: string;
+      };
     };
     Enums: {
       actor_kind: "user" | "system" | "job";
+      cadence_period: "week" | "month";
+      slot_kind: "regular" | "reserved_timely" | "manual";
+      slot_status: "open" | "filled" | "skipped";
       user_role: "admin" | "founder";
       user_status: "invited" | "active" | "deactivated";
       visibility_scope: "calendar" | "approved_content" | "drafts";
@@ -447,6 +796,9 @@ export const Constants = {
   public: {
     Enums: {
       actor_kind: ["user", "system", "job"],
+      cadence_period: ["week", "month"],
+      slot_kind: ["regular", "reserved_timely", "manual"],
+      slot_status: ["open", "filled", "skipped"],
       user_role: ["admin", "founder"],
       user_status: ["invited", "active", "deactivated"],
       visibility_scope: ["calendar", "approved_content", "drafts"],

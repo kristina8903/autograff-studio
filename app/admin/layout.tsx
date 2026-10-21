@@ -6,7 +6,14 @@ import { requireAdmin } from "@/lib/auth/dal";
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const admin = await requireAdmin();
   return (
-    <AppShell nav={[{ href: "/admin", label: "Founders & team" }]} email={admin.email}>
+    <AppShell
+      nav={[
+        { href: "/admin", label: "Founders & team" },
+        { href: "/admin/briefs", label: "Briefs" },
+        { href: "/admin/calendar", label: "Calendar" },
+      ]}
+      email={admin.email}
+    >
       {children}
     </AppShell>
   );

@@ -11,7 +11,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:db": "supabase db reset && supabase test db",
+    "test:db": "supabase db reset && supabase test db && vitest run --config vitest.db.config.mts",
     "test:e2e": "playwright test",
     "db:start": "supabase start",
     "db:stop": "supabase stop",

@@ -30,10 +30,10 @@ the same change when behavior changes.
 - `docs/PHASES.md` defines the phases, their scope, exclusions and acceptance
   criteria. Work only on the phase the user has approved. Do not start the
   next phase, or pull its features forward, without explicit approval.
-- **Current status: Phase 1 (application foundation) is built and tested
-  locally (2026-10-21; `docs/phase-reports/phase-1.md`). Its staging deploy
-  waits on the Vercel project, staging Supabase project and email sender.
-  Phase 2 is not approved to start.**
+- **Current status: Phase 1 (application foundation) is built and deployed
+  to staging (`docs/phase-reports/phase-1.md`). Phase 2 (monthly strategy and
+  cadence) is built and tested (2026-10-21; `docs/phase-reports/phase-2.md`).
+  Phase 3 is not approved to start.**
 - Phase order is agreed (D-19): 1, 2, 3, 4, 7, 5, 9, 8, go-live, 6, 10.
 - End each phase with a report:
   - what was built;
