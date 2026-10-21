@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isPublicPath } from "@/lib/domain/access";
-import { publicEnv } from "@/lib/env";
+import { EnvConfigError, publicEnv, type PublicEnv } from "@/lib/env";
 
 /**
  * Runs before every page request:
@@ -14,7 +14,24 @@ import { publicEnv } from "@/lib/env";
  * enforces row-level security regardless (docs/SECURITY.md §4).
  */
 export async function proxy(request: NextRequest) {
-  const env = publicEnv();
+  let env: PublicEnv;
+  try {
+    env = publicEnv();
+  } catch (error) {
+    if (!(error instanceof EnvConfigError)) throw error;
+    // Names the bad settings (never their values) instead of a bare 500.
+    console.error(error.message);
+    return new NextResponse(
+      [
+        "Content Studio is not configured correctly.",
+        "",
+        ...error.problems.map((problem) => `- ${problem}`),
+        "",
+        "Fix these in the hosting provider's environment variables, then redeploy.",
+      ].join("\n"),
+      { status: 500, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } },
+    );
+  }
   const pendingCookies: { name: string; value: string; options: Record<string, unknown> }[] = [];
   const pendingHeaders: Record<string, string> = {};
 

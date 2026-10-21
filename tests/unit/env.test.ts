@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePublicEnv } from "@/lib/env";
+import { EnvConfigError, parsePublicEnv } from "@/lib/env";
 import { parseServerEnv } from "@/lib/server/env";
 
 const validPublic = {
@@ -26,5 +26,25 @@ describe("environment validation", () => {
     expect(parseServerEnv({ SUPABASE_SECRET_KEY: "sb_secret_xxxxxxxxxxxxxxxxxxxxxx" }).SUPABASE_SECRET_KEY).toMatch(
       /^sb_secret_/,
     );
+  });
+
+  it("names each bad variable and what is wrong, never its value", () => {
+    let caught: unknown;
+    try {
+      parsePublicEnv({
+        ...validPublic,
+        NEXT_PUBLIC_APP_URL: "autograff-studio.vercel.app",
+        NEXT_PUBLIC_SUPABASE_URL: undefined,
+      });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(EnvConfigError);
+    const { problems, message } = caught as EnvConfigError;
+    expect(problems).toEqual([
+      "NEXT_PUBLIC_APP_URL must be a full address starting with https:// (or http:// locally)",
+      "NEXT_PUBLIC_SUPABASE_URL is not set",
+    ]);
+    expect(message).not.toContain("autograff-studio.vercel.app");
   });
 });
