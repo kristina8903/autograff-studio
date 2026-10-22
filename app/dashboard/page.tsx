@@ -39,14 +39,27 @@ export default async function FounderDashboard() {
   const briefs = (
     await Promise.all(months.map((month) => supabase.rpc("founder_brief", { p_month: firstDayOfMonth(month) })))
   ).flatMap(({ data }) => data ?? []);
+  const { data: drafts } = await supabase.rpc("founder_drafts");
+  const waiting = (drafts ?? []).filter((d) => d.status === "founder_review").length;
 
   return (
     <AppShell nav={FOUNDER_NAV} email={viewer.email}>
       <PageHeader
         title={founder ? `Welcome, ${founder.display_name}` : "Welcome"}
-        description="Drafts shared with you for review will appear here."
+        description="Your drafts, publishing slots and monthly focus."
       />
       <div className="grid gap-6 sm:grid-cols-2">
+        <Card className="sm:col-span-2">
+          <h2 className="mb-1 font-semibold">Drafts to review</h2>
+          <p className="text-sm text-muted">
+            {waiting
+              ? `${waiting} draft${waiting === 1 ? " is" : "s are"} waiting for you. `
+              : "Nothing is waiting for you right now. "}
+            <Link href="/drafts" className="text-accent hover:underline">
+              See your drafts
+            </Link>
+          </p>
+        </Card>
         <Card className="sm:col-span-2">
           <h2 className="mb-3 font-semibold">Your upcoming publishing slots</h2>
           {slots?.length ? (

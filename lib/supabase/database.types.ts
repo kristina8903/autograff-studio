@@ -20,6 +20,94 @@ export type Database = {
   };
   public: {
     Tables: {
+      approvals: {
+        Row: {
+          approver_role: Database["public"]["Enums"]["user_role"];
+          approver_user_id: string;
+          body_hash: string;
+          company_id: string;
+          created_at: string;
+          decision: Database["public"]["Enums"]["approval_decision"];
+          draft_id: string;
+          draft_version_id: string;
+          id: string;
+          invalidated_at: string | null;
+          invalidated_by_version_id: string | null;
+          invalidated_reason: string | null;
+          note: string;
+          selected_hook: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          approver_role: Database["public"]["Enums"]["user_role"];
+          approver_user_id: string;
+          body_hash: string;
+          company_id: string;
+          created_at?: string;
+          decision: Database["public"]["Enums"]["approval_decision"];
+          draft_id: string;
+          draft_version_id: string;
+          id?: string;
+          invalidated_at?: string | null;
+          invalidated_by_version_id?: string | null;
+          invalidated_reason?: string | null;
+          note?: string;
+          selected_hook?: string | null;
+        };
+        Update: {
+          approver_role?: Database["public"]["Enums"]["user_role"];
+          approver_user_id?: string;
+          body_hash?: string;
+          company_id?: string;
+          created_at?: string;
+          decision?: Database["public"]["Enums"]["approval_decision"];
+          draft_id?: string;
+          draft_version_id?: string;
+          id?: string;
+          invalidated_at?: string | null;
+          invalidated_by_version_id?: string | null;
+          invalidated_reason?: string | null;
+          note?: string;
+          selected_hook?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "approvals_approver_user_id_fkey";
+            columns: ["approver_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "approvals_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "approvals_draft_id_fkey";
+            columns: ["draft_id"];
+            isOneToOne: false;
+            referencedRelation: "drafts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "approvals_draft_version_id_fkey";
+            columns: ["draft_version_id"];
+            isOneToOne: false;
+            referencedRelation: "draft_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "approvals_invalidated_by_version_id_fkey";
+            columns: ["invalidated_by_version_id"];
+            isOneToOne: false;
+            referencedRelation: "draft_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       audit_events: {
         Row: {
           action: string;
@@ -291,6 +379,88 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "founders";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      comments: {
+        Row: {
+          anchor: Json | null;
+          author_role: Database["public"]["Enums"]["user_role"];
+          author_user_id: string | null;
+          body: string;
+          company_id: string;
+          created_at: string;
+          draft_id: string;
+          draft_version_id: string;
+          id: string;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          visibility: Database["public"]["Enums"]["comment_visibility"];
+        };
+        ComputedFields: never;
+        Insert: {
+          anchor?: Json | null;
+          author_role: Database["public"]["Enums"]["user_role"];
+          author_user_id?: string | null;
+          body: string;
+          company_id: string;
+          created_at?: string;
+          draft_id: string;
+          draft_version_id: string;
+          id?: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          visibility: Database["public"]["Enums"]["comment_visibility"];
+        };
+        Update: {
+          anchor?: Json | null;
+          author_role?: Database["public"]["Enums"]["user_role"];
+          author_user_id?: string | null;
+          body?: string;
+          company_id?: string;
+          created_at?: string;
+          draft_id?: string;
+          draft_version_id?: string;
+          id?: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          visibility?: Database["public"]["Enums"]["comment_visibility"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "comments_author_user_id_fkey";
+            columns: ["author_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "comments_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comments_draft_id_fkey";
+            columns: ["draft_id"];
+            isOneToOne: false;
+            referencedRelation: "drafts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comments_draft_version_id_fkey";
+            columns: ["draft_version_id"];
+            isOneToOne: false;
+            referencedRelation: "draft_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comments_resolved_by_fkey";
+            columns: ["resolved_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
           },
         ];
       };
@@ -1318,6 +1488,82 @@ export type Database = {
           },
         ];
       };
+      rewrite_requests: {
+        Row: {
+          company_id: string;
+          completed_at: string | null;
+          created_at: string;
+          draft_id: string;
+          generation_run_id: string | null;
+          id: string;
+          instructions: string;
+          requested_by: string | null;
+          resulting_version_id: string | null;
+          status: Database["public"]["Enums"]["rewrite_status"];
+        };
+        ComputedFields: never;
+        Insert: {
+          company_id: string;
+          completed_at?: string | null;
+          created_at?: string;
+          draft_id: string;
+          generation_run_id?: string | null;
+          id?: string;
+          instructions: string;
+          requested_by?: string | null;
+          resulting_version_id?: string | null;
+          status?: Database["public"]["Enums"]["rewrite_status"];
+        };
+        Update: {
+          company_id?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          draft_id?: string;
+          generation_run_id?: string | null;
+          id?: string;
+          instructions?: string;
+          requested_by?: string | null;
+          resulting_version_id?: string | null;
+          status?: Database["public"]["Enums"]["rewrite_status"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rewrite_requests_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "rewrite_requests_draft_id_fkey";
+            columns: ["draft_id"];
+            isOneToOne: false;
+            referencedRelation: "drafts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "rewrite_requests_generation_run_id_fkey";
+            columns: ["generation_run_id"];
+            isOneToOne: false;
+            referencedRelation: "generation_runs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "rewrite_requests_requested_by_fkey";
+            columns: ["requested_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "rewrite_requests_resulting_version_id_fkey";
+            columns: ["resulting_version_id"];
+            isOneToOne: false;
+            referencedRelation: "draft_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       settings: {
         Row: {
           ai_monthly_budget_usd: number;
@@ -1583,6 +1829,15 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      add_comment: {
+        Args: {
+          p_body: string;
+          p_draft_id: string;
+          p_quote: string;
+          p_visibility: Database["public"]["Enums"]["comment_visibility"];
+        };
+        Returns: string;
+      };
       add_feedback_signal: {
         Args: {
           p_format: Database["public"]["Enums"]["post_format"];
@@ -1610,6 +1865,7 @@ export type Database = {
           spent_usd: number;
         }[];
       };
+      approve_draft: { Args: { p_draft_id: string; p_note: string; p_version_id: string }; Returns: string };
       claim_generation_run: {
         Args: { p_run_id?: string };
         Returns: {
@@ -1657,6 +1913,10 @@ export type Database = {
         Args: { p_payload: Json; p_run_id: string; p_served_model: string; p_usage: Json };
         Returns: string;
       };
+      complete_feedback_run: {
+        Args: { p_run_id: string; p_served_model: string; p_signals: Json; p_usage: Json };
+        Returns: number;
+      };
       coverage_slot_counts: {
         Args: { p_founder_id: string; p_month: string };
         Returns: {
@@ -1687,6 +1947,68 @@ export type Database = {
           version_no: number;
         }[];
       };
+      founder_comments: {
+        Args: { p_draft_id: string };
+        Returns: {
+          author_role: Database["public"]["Enums"]["user_role"];
+          body: string;
+          created_at: string;
+          id: string;
+          quote: string;
+          resolved: boolean;
+          version_no: number;
+        }[];
+      };
+      founder_draft_flags: {
+        Args: { p_draft_id: string };
+        Returns: {
+          id: string;
+          kind: Database["public"]["Enums"]["flag_kind"];
+          message: string;
+          quote: string;
+          severity: Database["public"]["Enums"]["flag_severity"];
+          status: Database["public"]["Enums"]["flag_status"];
+        }[];
+      };
+      founder_draft_versions: {
+        Args: { p_draft_id: string };
+        Returns: {
+          alternative_hooks: string[];
+          author_kind: Database["public"]["Enums"]["draft_author_kind"];
+          body: string;
+          change_note: string;
+          created_at: string;
+          id: string;
+          is_current: boolean;
+          placeholder_count: number;
+          selected_hook_index: number;
+          version_no: number;
+        }[];
+      };
+      founder_drafts: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          approved: boolean;
+          id: string;
+          shared_at: string;
+          status: Database["public"]["Enums"]["draft_status"];
+          target_month: string;
+          title: string;
+          updated_at: string;
+          version_no: number;
+        }[];
+      };
+      founder_reject_draft: { Args: { p_draft_id: string; p_note: string }; Returns: undefined };
+      founder_rewrite_requests: {
+        Args: { p_draft_id: string };
+        Returns: {
+          created_at: string;
+          id: string;
+          instructions: string;
+          status: Database["public"]["Enums"]["rewrite_status"];
+        }[];
+      };
+      founder_save_version: { Args: { p_body: string; p_change_note: string; p_draft_id: string }; Returns: number };
       provision_invited_user: {
         Args: {
           p_founder_id?: string;
@@ -1715,6 +2037,7 @@ export type Database = {
           similarity: number;
         }[];
       };
+      request_changes: { Args: { p_comment: string; p_draft_id: string }; Returns: undefined };
       request_generation: {
         Args: {
           p_estimated_cost_usd: number;
@@ -1735,9 +2058,20 @@ export type Database = {
           run_status: Database["public"]["Enums"]["generation_status"];
         }[];
       };
+      request_rewrite: {
+        Args: { p_draft_id: string; p_idempotency_key: string; p_instructions: string };
+        Returns: {
+          message: string;
+          request_id: string;
+          run_id: string;
+          run_status: Database["public"]["Enums"]["generation_status"];
+        }[];
+      };
       requeue_stale_runs: { Args: { p_older_than?: string }; Returns: number };
+      resolve_comment: { Args: { p_comment_id: string }; Returns: undefined };
       resolve_review_flag: { Args: { p_action: string; p_flag_id: string; p_note: string }; Returns: undefined };
       review_feedback_signal: { Args: { p_decision: string; p_note: string; p_signal_id: string }; Returns: undefined };
+      revoke_approval: { Args: { p_draft_id: string; p_reason: string }; Returns: undefined };
       save_brief_version: {
         Args: {
           p_approved_facts: Json;
@@ -1800,6 +2134,8 @@ export type Database = {
         Args: { p_concept_id: string; p_status: Database["public"]["Enums"]["concept_status"] };
         Returns: undefined;
       };
+      set_run_input_refs: { Args: { p_refs: Json; p_run_id: string }; Returns: undefined };
+      share_draft: { Args: { p_draft_id: string; p_visible_flag_ids: string[] }; Returns: undefined };
       sync_calendar_slots: {
         Args: { p_founder_id: string; p_month: string; p_slots: Json; p_today: string };
         Returns: Json;
@@ -1838,9 +2174,11 @@ export type Database = {
     };
     Enums: {
       actor_kind: "user" | "system" | "job";
+      approval_decision: "approved" | "rejected";
       cadence_period: "week" | "month";
       claim_kind: "sourced_fact" | "opinion" | "interpretation" | "founder_experience";
       claim_support: "supported" | "weak" | "unsupported" | "disputed" | "not_applicable";
+      comment_visibility: "shared" | "admin_internal";
       concept_status: "proposed" | "selected" | "drafted" | "rejected" | "archived";
       draft_author_kind: "ai" | "admin" | "founder";
       draft_status:
@@ -1882,6 +2220,7 @@ export type Database = {
       generation_status: "queued" | "running" | "succeeded" | "failed" | "refused" | "cancelled";
       post_format:
         "story" | "opinion" | "how_to" | "data_insight" | "lesson" | "announcement" | "list" | "question" | "other";
+      rewrite_status: "requested" | "completed" | "failed";
       slot_kind: "regular" | "reserved_timely" | "manual";
       slot_status: "open" | "filled" | "skipped";
       user_role: "admin" | "founder";
@@ -1999,9 +2338,11 @@ export const Constants = {
   public: {
     Enums: {
       actor_kind: ["user", "system", "job"],
+      approval_decision: ["approved", "rejected"],
       cadence_period: ["week", "month"],
       claim_kind: ["sourced_fact", "opinion", "interpretation", "founder_experience"],
       claim_support: ["supported", "weak", "unsupported", "disputed", "not_applicable"],
+      comment_visibility: ["shared", "admin_internal"],
       concept_status: ["proposed", "selected", "drafted", "rejected", "archived"],
       draft_author_kind: ["ai", "admin", "founder"],
       draft_status: [
@@ -2055,6 +2396,7 @@ export const Constants = {
         "question",
         "other",
       ],
+      rewrite_status: ["requested", "completed", "failed"],
       slot_kind: ["regular", "reserved_timely", "manual"],
       slot_status: ["open", "filled", "skipped"],
       user_role: ["admin", "founder"],

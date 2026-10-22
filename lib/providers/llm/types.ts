@@ -5,7 +5,7 @@ import type { z } from "zod";
 import type { FailureKind } from "@/lib/domain/retry";
 import type { TokenUsage } from "@/lib/domain/pricing";
 
-export type LlmTask = "concepts" | "draft" | "fingerprint" | "repetition_judge";
+export type LlmTask = "concepts" | "draft" | "fingerprint" | "repetition_judge" | "feedback";
 
 /** Text given to the model. Trusted: brief, voice, examples. Untrusted: web or Slack text (Phase 5+). */
 export type ContextBlock = { label: string; text: string };

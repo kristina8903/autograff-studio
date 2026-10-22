@@ -34,6 +34,12 @@ voice profiles, writing examples (including bulk paste of LinkedIn posts),
 example retrieval, and admin review of feedback. See the
 [Phase 3 report](docs/phase-reports/phase-3.md).
 
+**Phase 4 (concepts and drafts) and Phase 7 (founder review and approval) are
+built and tested**: the admin shares drafts, founders edit, comment, ask for
+rewrites and approve the exact version they read, and any material edit
+withdraws the approval. See the [Phase 4](docs/phase-reports/phase-4.md) and
+[Phase 7](docs/phase-reports/phase-7.md) reports.
+
 | Area | Status |
 |---|---|
 | Product spec, architecture, data model, security, integrations, phases, decisions | Drafted, in [`docs/`](docs/) |
@@ -41,6 +47,7 @@ example retrieval, and admin review of feedback. See the
 | Briefs, cadence, calendar | **Built** (Phase 2) |
 | Voice profiles, writing examples, feedback | **Built** (Phase 3) |
 | AI generation | **Built** (Phase 4): concepts, drafts, flags, repetition checks; real-AI review on staging pending |
+| Founder review and approval | **Built** (Phase 7): sharing, founder edits, comments, rewrites, version-bound approval |
 | Web research | Not started (Phase 5); provider not chosen |
 | Slack integration | Not started (Phase 6); access and terms **not verified** |
 | LinkedIn publishing and analytics | Not started (Phase 10); access and terms **not verified**. Publishing is manual until then |

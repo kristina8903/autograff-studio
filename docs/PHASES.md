@@ -392,6 +392,10 @@ OAuth and token code, recorded in the phase report.
 
 ## Phase 7: Review and approval portal
 
+**Status:** built and tested locally, 2026-10-22; see the
+[Phase 7 report](phase-reports/phase-7.md). The definition of done still
+needs the founders to try the review flow on staging.
+
 **Goal.** Admin curation and founder review with versioned edits, comments,
 rewrite requests, approval bound to exact versions, and invalidation on
 material edits.

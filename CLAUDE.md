@@ -36,7 +36,9 @@ the same change when behavior changes.
   tested (2026-10-21; `docs/phase-reports/`). Phase 4 (concepts and
   drafts) is built and tested (2026-10-22); its definition of done waits on
   the manual review of real staging drafts. Phase 7 (review and approval) is
-  next in the agreed order and is not approved to start.**
+  built and tested (2026-10-22); its definition of done waits on the founders
+  trying it on staging. Phase 5 (research) is next in the agreed order and is
+  not approved to start.**
 - Phase order is agreed (D-19): 1, 2, 3, 4, 7, 5, 9, 8, go-live, 6, 10.
 - End each phase with a report:
   - what was built;

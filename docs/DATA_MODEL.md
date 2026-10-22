@@ -105,7 +105,34 @@
 >   repetition), `compared_type`/`compared_id` for repetition, and
 >   `resolved_at`. An override must record a reason (CHECK). There is no
 >   `repetition_overrides` table: overrides live on the flag (D-30).
-> - All five tables are admin-only until founder review (Phase 7).
+> - All five tables are admin-only. Founders read their own shared drafts
+>   through functions (Phase 7).
+>
+> **Implemented in Phase 7 (migration `20261022000002_review_approval.sql`):**
+> `approvals`, `comments`, `rewrite_requests`, the material-edit trigger on
+> `draft_versions`, and these functions:
+>
+> - admin: `share_draft`, `transition_draft` and `save_draft_version`
+>   (replaced);
+> - founder: `founder_drafts`, `founder_draft_versions`,
+>   `founder_draft_flags`, `founder_comments`, `founder_rewrite_requests`,
+>   `founder_save_version`, `approve_draft`, `revoke_approval`,
+>   `request_changes`, `founder_reject_draft` and `request_rewrite`;
+> - both: `add_comment` and `resolve_comment`;
+> - runner: `complete_draft_run` (replaced, adds rewrites),
+>   `complete_feedback_run` and `set_run_input_refs`.
+>
+> Differences from the proposal below (D-32):
+>
+> - `approvals` adds `selected_hook`, the normalized selected opening line.
+>   A valid approval matches the current version's hash and selected line,
+>   not its id, so a whitespace-only edit keeps it.
+> - `approvals` is insert-only for every role (trigger): an approval can only
+>   be invalidated, once, through the functions.
+> - `comments.anchor` is `{"quote": "…"}`. Founders can only write `shared`
+>   comments (CHECK).
+> - All three tables are admin-only to read. Founders use the functions,
+>   which never return the rationale, internal comments or unshared flags.
 
 Status: **Phase 0 proposal**, 2026-10-21. Postgres (Supabase). Nothing here is
 migrated yet. Table and column names are proposals that will be finalized in

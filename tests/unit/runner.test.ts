@@ -5,12 +5,14 @@ import type { ConceptPromptInput, GeneratedConcept } from "@/lib/prompts/concept
 import { FakeLlmProvider } from "@/lib/providers/llm/fake";
 import { LlmError, type Usage } from "@/lib/providers/llm/types";
 import type { RepetitionCandidate } from "@/lib/prompts/repetition-judge.v1";
+import type { FeedbackSignal } from "@/lib/prompts/feedback.v1";
 import {
   processDueRuns,
   processRun,
   type ClaimedRun,
   type DraftPayload,
   type DraftRunInput,
+  type FeedbackRunInput,
   type RunStore,
 } from "@/lib/server/generation/runner";
 
@@ -54,6 +56,18 @@ const DRAFT_INPUT: DraftRunInput = {
 /** In-memory store mirroring the database functions' rules. */
 class MemoryStore implements RunStore {
   drafts: { payload: DraftPayload; cost: number }[] = [];
+  feedback: FeedbackRunInput = { before: "Before text.", after: "After text.", format: "story" };
+  signals: FeedbackSignal[] = [];
+  async feedbackInput() {
+    return this.feedback;
+  }
+  async completeFeedback(runId: string, _model: string, usage: Usage, signals: FeedbackSignal[]) {
+    const run = this.runs.get(runId)!;
+    run.status = "succeeded";
+    run.cost += usage.costUsd;
+    this.signals = signals;
+    return signals.length;
+  }
   candidates: RepetitionCandidate[] = [];
   async draftInput() {
     return DRAFT_INPUT;
@@ -278,3 +292,45 @@ async function draftRequest() {
     effort: "medium" as const,
   };
 }
+
+describe("founder rewrites and feedback (Phase 7)", () => {
+  it("a rewrite run is written like a regeneration", async () => {
+    const store = new MemoryStore(["rewrite"]);
+    expect(await processRun(store, new FakeLlmProvider())).toEqual({ runId: "r0", status: "succeeded" });
+    expect(store.drafts).toHaveLength(1);
+  });
+
+  it("a feedback run proposes signals from the founder's edits", async () => {
+    const store = new MemoryStore(["feedback_classification"]);
+    const provider = new FakeLlmProvider();
+    expect(await processRun(store, provider)).toEqual({ runId: "r0", status: "succeeded" });
+    expect(store.signals.map((s) => s.kind)).toEqual(["stable_preference", "one_off"]);
+    expect(provider.calls[0]).toMatchObject({ task: "feedback", effort: "low" });
+    expect(store.runs.get("r0")!.cost).toBeGreaterThan(0);
+  });
+
+  it("drops empty statements and format preferences without a format, and keeps at most five", async () => {
+    const store = new MemoryStore(["feedback_classification"]);
+    const signal = (kind: string, statement: string, format: string | null = null) => ({ kind, statement, format });
+    const answer = {
+      signals: [
+        signal("one_off", "  "),
+        signal("format_preference", "Number first", null),
+        signal("format_preference", "Number first", "data_insight"),
+        ...Array.from({ length: 6 }, (_, i) => signal("one_off", `Edit ${i}`)),
+      ],
+    };
+    await processRun(store, new FakeLlmProvider(undefined, [answer]));
+    expect(store.signals).toHaveLength(5);
+    expect(store.signals[0]).toEqual({ kind: "format_preference", statement: "Number first", format: "data_insight" });
+  });
+
+  it("an answer outside the allowed kinds is invalid (an admin-only kind included)", async () => {
+    const store = new MemoryStore(["feedback_classification"]);
+    const answer = { signals: [{ kind: "editorial_correction", statement: "Don't name competitors", format: null }] };
+    expect(await processRun(store, new FakeLlmProvider(undefined, [answer]))).toMatchObject({
+      status: "failed",
+      error: "invalid_output",
+    });
+  });
+});
