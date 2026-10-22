@@ -235,10 +235,9 @@ examples loaded in staging, if the founder consents.
 
 ## Phase 4: Content concepts and generation
 
-**Status:** in progress. 4a (AI provider, runs, cost ceilings, concepts) is
-built and tested locally, 2026-10-21; see the
-[Phase 4a report](phase-reports/phase-4a.md). 4b (drafts, lint, repetition
-checks) is next.
+**Status:** built and tested locally (4a on 2026-10-21, 4b on 2026-10-22); see
+the [Phase 4 report](phase-reports/phase-4.md). The definition of done still
+needs the manual review of real staging drafts.
 
 **Goal.** Generate concept batches and drafts with full traceability, cost
 control, versioning and repetition checks.

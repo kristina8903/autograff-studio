@@ -4,7 +4,15 @@ import type { FailureKind } from "@/lib/domain/retry";
 import type { ConceptPromptInput, GeneratedConcept } from "@/lib/prompts/concepts.v1";
 import { FakeLlmProvider } from "@/lib/providers/llm/fake";
 import { LlmError, type Usage } from "@/lib/providers/llm/types";
-import { processDueRuns, processRun, type ClaimedRun, type RunStore } from "@/lib/server/generation/runner";
+import type { RepetitionCandidate } from "@/lib/prompts/repetition-judge.v1";
+import {
+  processDueRuns,
+  processRun,
+  type ClaimedRun,
+  type DraftPayload,
+  type DraftRunInput,
+  type RunStore,
+} from "@/lib/server/generation/runner";
 
 const INPUT: ConceptPromptInput = {
   founder: { displayName: "Local CEO", roleTitle: "CEO" },
@@ -20,8 +28,43 @@ const INPUT: ConceptPromptInput = {
   count: 3,
 };
 
+const DRAFT_INPUT: DraftRunInput = {
+  prompt: {
+    founder: { displayName: "Local CEO", roleTitle: "CEO" },
+    founderId: "f1",
+    monthLabel: "November 2026",
+    brief: INPUT.brief,
+    concept: {
+      title: "Status updates are a product",
+      coreArgument: "Fleets pay for predictability.",
+      hook: "Who tells the fleet manager?",
+      format: "story",
+      audience: "Fleet leads",
+      whyThisFounder: "",
+      evidenceRequirements: [],
+      needsPersonalStory: true,
+    },
+    voiceContext: "voice",
+    revising: null,
+  },
+  review: { approvedFacts: [], avoidPhrases: [], styleRules: [] },
+  judgeModel: "claude-sonnet-5-5",
+};
+
 /** In-memory store mirroring the database functions' rules. */
 class MemoryStore implements RunStore {
+  drafts: { payload: DraftPayload; cost: number }[] = [];
+  candidates: RepetitionCandidate[] = [];
+  async draftInput() {
+    return DRAFT_INPUT;
+  }
+  async repetitionCandidates() {
+    return this.candidates;
+  }
+  async completeDraft(runId: string, _model: string, usage: Usage, payload: DraftPayload) {
+    this.runs.get(runId)!.status = "succeeded";
+    this.drafts.push({ payload, cost: usage.costUsd });
+  }
   runs = new Map<string, ClaimedRun & { status: string; retryAfter?: number | null; error?: string; cost: number }>();
   saved: GeneratedConcept[] = [];
   constructor(kinds: string[] = ["concept_batch"]) {
@@ -153,6 +196,84 @@ async function sampleRequest() {
     ...buildConceptPrompt(INPUT),
     untrustedContext: [],
     schema: conceptBatchSchema,
+    maxOutputTokens: 100,
+    effort: "medium" as const,
+  };
+}
+
+describe("draft runs", () => {
+  const candidate: RepetitionCandidate = {
+    compared_type: "draft",
+    compared_id: "d-older",
+    excerpt: "An older post about status updates",
+    similarity: 0.42,
+    same_argument: true,
+  };
+
+  it("stores the draft with placeholder, unsupported-claim and repetition flags, and the judge's cost", async () => {
+    const store = new MemoryStore(["draft"]);
+    store.candidates = [candidate];
+    const provider = new FakeLlmProvider();
+    expect(await processRun(store, provider)).toEqual({ runId: "r0", status: "succeeded" });
+    const { payload, cost } = store.drafts[0];
+    expect(payload.body).toContain("[FOUNDER TO SUPPLY: a time a repair status surprise cost you a day]");
+    expect(payload.flags.map((f) => [f.source, f.kind, f.severity])).toEqual([
+      ["placeholder", "needs_personal_context", "blocking"],
+      ["claims", "unsupported_claim", "blocking"],
+      ["repetition", "repetition", "warning"],
+    ]);
+    expect(payload.flags[2]).toMatchObject({ compared_type: "draft", compared_id: "d-older" });
+    expect(payload.checks.map((c) => c.method)).toEqual(["fingerprint", "llm"]);
+    expect(payload.claims).toEqual([expect.objectContaining({ support_status: "unsupported" })]);
+    // Two calls: the draft (Opus) and the judge (Sonnet), both counted.
+    expect(provider.calls.map((c) => [c.task, c.model])).toEqual([
+      ["draft", "claude-opus-5-5"],
+      ["repetition_judge", "claude-sonnet-5-5"],
+    ]);
+    expect(cost).toBeGreaterThan(0);
+  });
+
+  it("skips the judge when nothing similar exists", async () => {
+    const store = new MemoryStore(["draft"]);
+    const provider = new FakeLlmProvider();
+    await processRun(store, provider);
+    expect(provider.calls.map((c) => c.task)).toEqual(["draft"]);
+    expect(store.drafts[0].payload.flags.some((f) => f.source === "repetition")).toBe(false);
+  });
+
+  it("falls back to the pre-filter when the judge fails, and still stores the draft", async () => {
+    const store = new MemoryStore(["draft"]);
+    store.candidates = [candidate, { ...candidate, compared_id: "weak", same_argument: false, similarity: 0.36 }];
+    const fake = new FakeLlmProvider();
+    const draft = (await fake.generateStructured({ ...(await draftRequest()) })).data;
+    const provider = new FakeLlmProvider(undefined, [draft, new LlmError("server")]);
+    expect(await processRun(store, provider)).toMatchObject({ status: "succeeded" });
+    const repetition = store.drafts[0].payload.flags.filter((f) => f.source === "repetition");
+    expect(repetition.map((f) => f.compared_id)).toEqual(["d-older"]);
+    expect(repetition[0].message).toMatch(/^Makes the same argument as a draft/);
+  });
+
+  it("rejects a body that carries a rationale or sources, and stores nothing", async () => {
+    const fake = new FakeLlmProvider();
+    const draft = (await fake.generateStructured({ ...(await draftRequest()) })).data as { post_body: string };
+    const leaky = { ...draft, post_body: `${draft.post_body}\n\nRationale: lead with the hook.` };
+    const store = new MemoryStore(["draft"]);
+    expect(await processRun(store, new FakeLlmProvider(undefined, [leaky]))).toMatchObject({
+      status: "failed",
+      error: "invalid_output",
+    });
+    expect(store.drafts).toEqual([]);
+  });
+});
+
+async function draftRequest() {
+  const { buildDraftPrompt, draftSchema } = await import("@/lib/prompts/draft.v1");
+  return {
+    task: "draft" as const,
+    model: "claude-opus-5-5",
+    ...buildDraftPrompt(DRAFT_INPUT.prompt),
+    untrustedContext: [],
+    schema: draftSchema,
     maxOutputTokens: 100,
     effort: "medium" as const,
   };

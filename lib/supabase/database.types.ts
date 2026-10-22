@@ -442,6 +442,296 @@ export type Database = {
           },
         ];
       };
+      draft_claims: {
+        Row: {
+          approved_fact: string | null;
+          claim_kind: Database["public"]["Enums"]["claim_kind"];
+          claim_text: string;
+          company_id: string;
+          draft_version_id: string;
+          finding_id: string | null;
+          id: string;
+          span_end: number | null;
+          span_start: number | null;
+          support_status: Database["public"]["Enums"]["claim_support"];
+        };
+        ComputedFields: never;
+        Insert: {
+          approved_fact?: string | null;
+          claim_kind: Database["public"]["Enums"]["claim_kind"];
+          claim_text: string;
+          company_id: string;
+          draft_version_id: string;
+          finding_id?: string | null;
+          id?: string;
+          span_end?: number | null;
+          span_start?: number | null;
+          support_status: Database["public"]["Enums"]["claim_support"];
+        };
+        Update: {
+          approved_fact?: string | null;
+          claim_kind?: Database["public"]["Enums"]["claim_kind"];
+          claim_text?: string;
+          company_id?: string;
+          draft_version_id?: string;
+          finding_id?: string | null;
+          id?: string;
+          span_end?: number | null;
+          span_start?: number | null;
+          support_status?: Database["public"]["Enums"]["claim_support"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "draft_claims_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "draft_claims_draft_version_id_fkey";
+            columns: ["draft_version_id"];
+            isOneToOne: false;
+            referencedRelation: "draft_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      draft_versions: {
+        Row: {
+          alternative_hooks: string[];
+          author_kind: Database["public"]["Enums"]["draft_author_kind"];
+          body: string;
+          body_normalized_hash: string;
+          change_note: string;
+          company_id: string;
+          created_at: string;
+          created_by: string | null;
+          draft_id: string;
+          fingerprint: NonNullable<Json>;
+          founder_id: string;
+          generation_run_id: string | null;
+          id: string;
+          parent_version_id: string | null;
+          placeholder_count: number;
+          rationale: string;
+          selected_hook_index: number | null;
+          version_no: number;
+          voice_profile_version_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          alternative_hooks?: string[];
+          author_kind: Database["public"]["Enums"]["draft_author_kind"];
+          body: string;
+          body_normalized_hash?: string;
+          change_note?: string;
+          company_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          draft_id: string;
+          fingerprint?: NonNullable<Json>;
+          founder_id: string;
+          generation_run_id?: string | null;
+          id?: string;
+          parent_version_id?: string | null;
+          placeholder_count?: number;
+          rationale?: string;
+          selected_hook_index?: number | null;
+          version_no: number;
+          voice_profile_version_id?: string | null;
+        };
+        Update: {
+          alternative_hooks?: string[];
+          author_kind?: Database["public"]["Enums"]["draft_author_kind"];
+          body?: string;
+          body_normalized_hash?: string;
+          change_note?: string;
+          company_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          draft_id?: string;
+          fingerprint?: NonNullable<Json>;
+          founder_id?: string;
+          generation_run_id?: string | null;
+          id?: string;
+          parent_version_id?: string | null;
+          placeholder_count?: number;
+          rationale?: string;
+          selected_hook_index?: number | null;
+          version_no?: number;
+          voice_profile_version_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "draft_versions_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "draft_versions_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "draft_versions_draft_id_fkey";
+            columns: ["draft_id"];
+            isOneToOne: false;
+            referencedRelation: "drafts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "draft_versions_founder_id_fkey";
+            columns: ["founder_id"];
+            isOneToOne: false;
+            referencedRelation: "founders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "draft_versions_generation_run_id_fkey";
+            columns: ["generation_run_id"];
+            isOneToOne: false;
+            referencedRelation: "generation_runs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "draft_versions_parent_version_id_fkey";
+            columns: ["parent_version_id"];
+            isOneToOne: false;
+            referencedRelation: "draft_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "draft_versions_voice_profile_version_id_fkey";
+            columns: ["voice_profile_version_id"];
+            isOneToOne: false;
+            referencedRelation: "voice_profile_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      drafts: {
+        Row: {
+          brief_version_id: string;
+          company_id: string;
+          concept_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          current_version_id: string | null;
+          founder_id: string;
+          generation_run_id: string | null;
+          id: string;
+          is_external: boolean;
+          proposed_date: string | null;
+          scheduled_for: string | null;
+          shared_with_founder_at: string | null;
+          status: Database["public"]["Enums"]["draft_status"];
+          superseded_by_draft_id: string | null;
+          target_month: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          brief_version_id: string;
+          company_id: string;
+          concept_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          current_version_id?: string | null;
+          founder_id: string;
+          generation_run_id?: string | null;
+          id?: string;
+          is_external?: boolean;
+          proposed_date?: string | null;
+          scheduled_for?: string | null;
+          shared_with_founder_at?: string | null;
+          status?: Database["public"]["Enums"]["draft_status"];
+          superseded_by_draft_id?: string | null;
+          target_month: string;
+          updated_at?: string;
+        };
+        Update: {
+          brief_version_id?: string;
+          company_id?: string;
+          concept_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          current_version_id?: string | null;
+          founder_id?: string;
+          generation_run_id?: string | null;
+          id?: string;
+          is_external?: boolean;
+          proposed_date?: string | null;
+          scheduled_for?: string | null;
+          shared_with_founder_at?: string | null;
+          status?: Database["public"]["Enums"]["draft_status"];
+          superseded_by_draft_id?: string | null;
+          target_month?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "drafts_brief_version_id_fkey";
+            columns: ["brief_version_id"];
+            isOneToOne: false;
+            referencedRelation: "brief_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "drafts_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "drafts_concept_id_fkey";
+            columns: ["concept_id"];
+            isOneToOne: false;
+            referencedRelation: "concepts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "drafts_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "drafts_current_version_fk";
+            columns: ["current_version_id"];
+            isOneToOne: false;
+            referencedRelation: "draft_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "drafts_founder_id_fkey";
+            columns: ["founder_id"];
+            isOneToOne: false;
+            referencedRelation: "founders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "drafts_generation_run_id_fkey";
+            columns: ["generation_run_id"];
+            isOneToOne: false;
+            referencedRelation: "generation_runs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "drafts_superseded_by_draft_id_fkey";
+            columns: ["superseded_by_draft_id"];
+            isOneToOne: false;
+            referencedRelation: "drafts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       feedback_signals: {
         Row: {
           applied_voice_profile_version_id: string | null;
@@ -897,6 +1187,137 @@ export type Database = {
           },
         ];
       };
+      repetition_checks: {
+        Row: {
+          company_id: string;
+          compared_id: string;
+          compared_type: string;
+          created_at: string;
+          explanation: string;
+          id: string;
+          method: string;
+          score: number | null;
+          subject_id: string;
+          subject_type: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          company_id: string;
+          compared_id: string;
+          compared_type: string;
+          created_at?: string;
+          explanation?: string;
+          id?: string;
+          method: string;
+          score?: number | null;
+          subject_id: string;
+          subject_type: string;
+        };
+        Update: {
+          company_id?: string;
+          compared_id?: string;
+          compared_type?: string;
+          created_at?: string;
+          explanation?: string;
+          id?: string;
+          method?: string;
+          score?: number | null;
+          subject_id?: string;
+          subject_type?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "repetition_checks_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      review_flags: {
+        Row: {
+          company_id: string;
+          compared_id: string | null;
+          compared_type: string | null;
+          created_at: string;
+          draft_version_id: string;
+          id: string;
+          kind: Database["public"]["Enums"]["flag_kind"];
+          message: string;
+          resolution_note: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          severity: Database["public"]["Enums"]["flag_severity"];
+          source: string;
+          span_end: number | null;
+          span_start: number | null;
+          status: Database["public"]["Enums"]["flag_status"];
+          visible_to_founder: boolean;
+        };
+        ComputedFields: never;
+        Insert: {
+          company_id: string;
+          compared_id?: string | null;
+          compared_type?: string | null;
+          created_at?: string;
+          draft_version_id: string;
+          id?: string;
+          kind: Database["public"]["Enums"]["flag_kind"];
+          message: string;
+          resolution_note?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          severity: Database["public"]["Enums"]["flag_severity"];
+          source: string;
+          span_end?: number | null;
+          span_start?: number | null;
+          status?: Database["public"]["Enums"]["flag_status"];
+          visible_to_founder?: boolean;
+        };
+        Update: {
+          company_id?: string;
+          compared_id?: string | null;
+          compared_type?: string | null;
+          created_at?: string;
+          draft_version_id?: string;
+          id?: string;
+          kind?: Database["public"]["Enums"]["flag_kind"];
+          message?: string;
+          resolution_note?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          severity?: Database["public"]["Enums"]["flag_severity"];
+          source?: string;
+          span_end?: number | null;
+          span_start?: number | null;
+          status?: Database["public"]["Enums"]["flag_status"];
+          visible_to_founder?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "review_flags_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "review_flags_draft_version_id_fkey";
+            columns: ["draft_version_id"];
+            isOneToOne: false;
+            referencedRelation: "draft_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "review_flags_resolved_by_fkey";
+            columns: ["resolved_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       settings: {
         Row: {
           ai_monthly_budget_usd: number;
@@ -1232,6 +1653,10 @@ export type Database = {
         Args: { p_concepts: Json; p_run_id: string; p_served_model: string; p_usage: Json };
         Returns: number;
       };
+      complete_draft_run: {
+        Args: { p_payload: Json; p_run_id: string; p_served_model: string; p_usage: Json };
+        Returns: string;
+      };
       coverage_slot_counts: {
         Args: { p_founder_id: string; p_month: string };
         Returns: {
@@ -1272,6 +1697,24 @@ export type Database = {
         Returns: undefined;
       };
       record_sign_in: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Enums"]["user_status"] };
+      repetition_candidates: {
+        Args: {
+          p_argument_key: string;
+          p_company_id: string;
+          p_exclude_concept_id: string;
+          p_exclude_draft_id: string;
+          p_month: string;
+          p_text: string;
+        };
+        Returns: {
+          compared_id: string;
+          compared_type: string;
+          excerpt: string;
+          founder_id: string;
+          same_argument: boolean;
+          similarity: number;
+        }[];
+      };
       request_generation: {
         Args: {
           p_estimated_cost_usd: number;
@@ -1293,6 +1736,7 @@ export type Database = {
         }[];
       };
       requeue_stale_runs: { Args: { p_older_than?: string }; Returns: number };
+      resolve_review_flag: { Args: { p_action: string; p_flag_id: string; p_note: string }; Returns: undefined };
       review_feedback_signal: { Args: { p_decision: string; p_note: string; p_signal_id: string }; Returns: undefined };
       save_brief_version: {
         Args: {
@@ -1302,6 +1746,18 @@ export type Database = {
           p_founder_emphasis: Json;
           p_month: string;
           p_title: string;
+        };
+        Returns: number;
+      };
+      save_draft_version: {
+        Args: {
+          p_alternative_hooks: string[];
+          p_body: string;
+          p_change_note: string;
+          p_claims: Json;
+          p_draft_id: string;
+          p_flags: Json;
+          p_selected_hook_index: number;
         };
         Returns: number;
       };
@@ -1348,6 +1804,10 @@ export type Database = {
         Args: { p_founder_id: string; p_month: string; p_slots: Json; p_today: string };
         Returns: Json;
       };
+      transition_draft: {
+        Args: { p_draft_id: string; p_reason: string; p_to: Database["public"]["Enums"]["draft_status"] };
+        Returns: undefined;
+      };
       update_concept: {
         Args: {
           p_audience: string;
@@ -1379,10 +1839,34 @@ export type Database = {
     Enums: {
       actor_kind: "user" | "system" | "job";
       cadence_period: "week" | "month";
+      claim_kind: "sourced_fact" | "opinion" | "interpretation" | "founder_experience";
+      claim_support: "supported" | "weak" | "unsupported" | "disputed" | "not_applicable";
       concept_status: "proposed" | "selected" | "drafted" | "rejected" | "archived";
+      draft_author_kind: "ai" | "admin" | "founder";
+      draft_status:
+        | "drafting"
+        | "admin_review"
+        | "founder_review"
+        | "changes_requested"
+        | "approved"
+        | "scheduled"
+        | "published"
+        | "rejected"
+        | "archived";
       feedback_kind: "stable_preference" | "format_preference" | "one_off" | "editorial_correction";
       feedback_proposer: "system" | "admin";
       feedback_status: "proposed" | "accepted" | "rejected";
+      flag_kind:
+        | "unsupported_claim"
+        | "weak_evidence"
+        | "needs_personal_context"
+        | "competitor_claim"
+        | "product_claim"
+        | "repetition"
+        | "sensitive_content"
+        | "style";
+      flag_severity: "blocking" | "warning" | "info";
+      flag_status: "open" | "resolved" | "overridden";
       generation_kind:
         | "concept_batch"
         | "concept_regen"
@@ -1516,10 +2000,36 @@ export const Constants = {
     Enums: {
       actor_kind: ["user", "system", "job"],
       cadence_period: ["week", "month"],
+      claim_kind: ["sourced_fact", "opinion", "interpretation", "founder_experience"],
+      claim_support: ["supported", "weak", "unsupported", "disputed", "not_applicable"],
       concept_status: ["proposed", "selected", "drafted", "rejected", "archived"],
+      draft_author_kind: ["ai", "admin", "founder"],
+      draft_status: [
+        "drafting",
+        "admin_review",
+        "founder_review",
+        "changes_requested",
+        "approved",
+        "scheduled",
+        "published",
+        "rejected",
+        "archived",
+      ],
       feedback_kind: ["stable_preference", "format_preference", "one_off", "editorial_correction"],
       feedback_proposer: ["system", "admin"],
       feedback_status: ["proposed", "accepted", "rejected"],
+      flag_kind: [
+        "unsupported_claim",
+        "weak_evidence",
+        "needs_personal_context",
+        "competitor_claim",
+        "product_claim",
+        "repetition",
+        "sensitive_content",
+        "style",
+      ],
+      flag_severity: ["blocking", "warning", "info"],
+      flag_status: ["open", "resolved", "overridden"],
       generation_kind: [
         "concept_batch",
         "concept_regen",

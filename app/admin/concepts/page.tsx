@@ -17,6 +17,7 @@ import {
 import { formatLabel } from "@/lib/domain/formats";
 import { MAX_CONCEPTS_PER_RUN } from "@/lib/prompts/concepts.v1";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { WriteDraftForm } from "../drafts/draft-forms";
 import { EditConceptForm, GenerateForm, RegenerateForm, StatusButtons } from "./concept-forms";
 
 export const metadata: Metadata = { title: "Concepts" };
@@ -42,26 +43,30 @@ export default async function ConceptsPage({ searchParams }: PageProps<"/admin/c
   const showAll = params.all === "1";
 
   const supabase = await createSupabaseServerClient();
-  const [{ data: founders }, { data: rules }, { data: concepts }, { data: runs }] = await Promise.all([
-    supabase.from("founders").select("id, display_name, role_title").eq("active", true).order("created_at"),
-    supabase
-      .from("cadence_rules")
-      .select("founder_id, effective_from, effective_to, candidate_target_min, candidate_target_max")
-      .lte("effective_from", lastDayOfMonth(month))
-      .order("effective_from"),
-    supabase
-      .from("concepts")
-      .select("*, run:generation_runs(model, served_model)")
-      .eq("target_month", firstDayOfMonth(month))
-      .order("created_at"),
-    supabase
-      .from("generation_runs")
-      .select("id, founder_id, kind, status, error_message, created_at")
-      .eq("target_month", firstDayOfMonth(month))
-      .in("kind", ["concept_batch", "concept_regen"])
-      .order("created_at", { ascending: false })
-      .limit(50),
-  ]);
+  const [{ data: founders }, { data: rules }, { data: concepts }, { data: runs }, { data: drafts }] = await Promise.all(
+    [
+      supabase.from("founders").select("id, display_name, role_title").eq("active", true).order("created_at"),
+      supabase
+        .from("cadence_rules")
+        .select("founder_id, effective_from, effective_to, candidate_target_min, candidate_target_max")
+        .lte("effective_from", lastDayOfMonth(month))
+        .order("effective_from"),
+      supabase
+        .from("concepts")
+        .select("*, run:generation_runs(model, served_model)")
+        .eq("target_month", firstDayOfMonth(month))
+        .order("created_at"),
+      supabase
+        .from("generation_runs")
+        .select("id, founder_id, kind, status, error_message, created_at")
+        .eq("target_month", firstDayOfMonth(month))
+        .in("kind", ["concept_batch", "concept_regen", "draft"])
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase.from("drafts").select("id, concept_id").eq("target_month", firstDayOfMonth(month)),
+    ],
+  );
+  const draftsOf = (conceptId: string) => (drafts ?? []).filter((d) => d.concept_id === conceptId);
   const active = (runs ?? []).some((r) => r.status === "queued" || r.status === "running");
 
   return (
@@ -200,11 +205,31 @@ export default async function ConceptsPage({ searchParams }: PageProps<"/admin/c
                         </div>
                       ) : null}
                     </dl>
-                    {concept.status !== "archived" && concept.status !== "drafted" ? (
+                    {concept.status !== "archived" ? (
                       <div className="mt-3 flex flex-wrap items-start gap-2">
-                        <StatusButtons conceptId={concept.id} status={concept.status} />
-                        {concept.status !== "rejected" ? <EditConceptForm concept={concept} /> : null}
-                        <RegenerateForm conceptId={concept.id} nonce={crypto.randomUUID()} />
+                        {concept.status === "selected" || concept.status === "drafted" ? (
+                          <WriteDraftForm
+                            conceptId={concept.id}
+                            nonce={crypto.randomUUID()}
+                            label={concept.status === "drafted" ? "Write another draft" : "Write a draft"}
+                          />
+                        ) : null}
+                        {concept.status !== "drafted" ? (
+                          <>
+                            <StatusButtons conceptId={concept.id} status={concept.status} />
+                            {concept.status !== "rejected" ? <EditConceptForm concept={concept} /> : null}
+                            <RegenerateForm conceptId={concept.id} nonce={crypto.randomUUID()} />
+                          </>
+                        ) : null}
+                        {draftsOf(concept.id).map((d, i) => (
+                          <Link
+                            key={d.id}
+                            href={`/admin/drafts/${d.id}`}
+                            className="self-center text-xs text-accent hover:underline"
+                          >
+                            Draft {i + 1}
+                          </Link>
+                        ))}
                       </div>
                     ) : null}
                   </Card>

@@ -88,6 +88,24 @@
 >   `superseded_by` (set when regenerated; the old row is archived) and
 >   `edited_by`/`edited_at`. `concept_evidence` waits for Phase 5 (D-29).
 > - Runs, costs and concepts are admin-only; founders see none of them.
+>
+> **Implemented in Phase 4b (migration `20261022000001_drafts.sql`):**
+> `drafts`, `draft_versions`, `draft_claims`, `review_flags`,
+> `repetition_checks`, `private.normalize_body`, and the functions
+> `complete_draft_run` (runner), `save_draft_version`, `resolve_review_flag`,
+> `transition_draft` and `repetition_candidates`. Differences from the
+> proposal below:
+>
+> - `drafts` adds `target_month` and `generation_run_id`. `draft_versions`
+>   adds `founder_id`, `company_id` and `change_note`; `body_normalized_hash`
+>   and `placeholder_count` are set by trigger.
+> - `draft_claims` adds `approved_fact`, the brief's wording of the fact that
+>   backs a claim. `finding_id` gets its foreign key in Phase 5.
+> - `review_flags` adds `source` (model, lint, placeholder, claims,
+>   repetition), `compared_type`/`compared_id` for repetition, and
+>   `resolved_at`. An override must record a reason (CHECK). There is no
+>   `repetition_overrides` table: overrides live on the flag (D-30).
+> - All five tables are admin-only until founder review (Phase 7).
 
 Status: **Phase 0 proposal**, 2026-10-21. Postgres (Supabase). Nothing here is
 migrated yet. Table and column names are proposals that will be finalized in

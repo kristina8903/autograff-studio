@@ -1,12 +1,10 @@
 "use server";
 
-import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
 import { requireAdmin } from "@/lib/auth/dal";
 import { isIsoMonth } from "@/lib/domain/dates";
 import { isPostFormat } from "@/lib/domain/formats";
-import { estimateMaxCost, usd } from "@/lib/domain/pricing";
+import { estimateMaxCost } from "@/lib/domain/pricing";
 import { lines } from "@/lib/domain/briefs";
 import {
   CONCEPTS_MAX_OUTPUT_TOKENS,
@@ -15,15 +13,15 @@ import {
   MAX_CONCEPTS_PER_RUN,
   buildConceptPrompt,
 } from "@/lib/prompts/concepts.v1";
-import { llmModels, llmProvider } from "@/lib/providers/llm";
+import { llmModels } from "@/lib/providers/llm";
 import { promptText } from "@/lib/providers/llm/types";
-import { runGenerationNow } from "@/lib/server/admin/generation";
 import {
   MissingInputError,
   buildConceptInput,
   resolveConceptRefs,
   type ConceptRefs,
 } from "@/lib/server/generation/context";
+import { startRun } from "@/lib/server/generation/request";
 import type { Json } from "@/lib/supabase/database.types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -33,11 +31,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function str(form: FormData, key: string): string {
   return String(form.get(key) ?? "").trim();
-}
-
-/** Same click (same form nonce) and same inputs → same key → one run (SECURITY §10). */
-function idempotencyKey(parts: string[]): string {
-  return createHash("sha256").update(parts.join("|")).digest("hex");
 }
 
 async function requestRun(options: {
@@ -77,44 +70,24 @@ async function requestRun(options: {
 
   const model = llmModels().draft;
   const estimate = estimateMaxCost(model, promptLength, CONCEPTS_MAX_OUTPUT_TOKENS);
-  const { data, error } = await supabase.rpc("request_generation", {
-    p_kind: options.kind,
-    p_founder_id: options.founderId,
-    p_target_month: `${options.month}-01`,
-    p_provider: llmProvider().name,
-    p_model: model,
-    p_prompt_template: CONCEPTS_TEMPLATE,
-    p_prompt_template_version: CONCEPTS_VERSION,
-    p_input_refs: refs as unknown as Json,
-    p_params: {
+  const result = await startRun({
+    kind: options.kind,
+    founderId: options.founderId,
+    month: options.month,
+    model,
+    template: CONCEPTS_TEMPLATE,
+    templateVersion: CONCEPTS_VERSION,
+    refs: refs as unknown as Json,
+    params: {
       count: options.count,
       ...(options.replacing ? { concept_id: options.replacing.conceptId, guidance: options.replacing.guidance } : {}),
     },
-    p_estimated_cost_usd: Number(estimate.toFixed(6)),
-    p_idempotency_key: idempotencyKey([
-      options.kind,
-      options.founderId,
-      options.month,
-      refs.brief_version_id,
-      options.replacing?.conceptId ?? "",
-      options.nonce,
-    ]),
+    estimate,
+    keyParts: [refs.brief_version_id, options.replacing?.conceptId ?? "", options.nonce],
   });
-  if (error) return { error: "The run could not be requested." };
-  const run = data[0];
   revalidatePath("/admin/concepts");
   revalidatePath("/admin/ai");
-  if (run.run_status === "refused") return { error: `Not started. ${run.message}` };
-  if (run.message === "already requested") return { message: "Already requested; it is running." };
-  after(async () => {
-    try {
-      await runGenerationNow(run.run_id);
-    } catch (e) {
-      // The cron tick retries it; log the type only, never content.
-      console.error("generation run did not start", run.run_id, e instanceof Error ? e.name : typeof e);
-    }
-  });
-  return { message: `Generating. This run can cost up to ${usd(estimate)}.` };
+  return result;
 }
 
 export async function requestConceptsAction(_state: ActionState, form: FormData): Promise<ActionState> {

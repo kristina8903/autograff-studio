@@ -161,3 +161,133 @@ export async function buildConceptInput(
       : null,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Drafts
+// ---------------------------------------------------------------------------
+
+export type DraftRefs = ConceptRefs;
+
+/** A draft keeps its concept's brief version; the voice version is the current one. */
+export async function resolveDraftRefs(db: Db, companyId: string, conceptId: string): Promise<DraftRefs> {
+  const { data: concept } = await db
+    .from("concepts")
+    .select("founder_id, brief_version_id, title, core_argument, hook, format, fingerprint, founder:founders(timezone)")
+    .eq("company_id", companyId)
+    .eq("id", conceptId)
+    .maybeSingle();
+  if (!concept) throw new MissingInputError("The concept no longer exists.");
+  const [{ data: profile }, { data: examples }] = await Promise.all([
+    db
+      .from("voice_profiles")
+      .select("current:voice_profile_versions!voice_profiles_current_version_fk(id)")
+      .eq("company_id", companyId)
+      .eq("founder_id", concept.founder_id)
+      .maybeSingle(),
+    db
+      .from("writing_examples")
+      .select(EXAMPLE_COLUMNS)
+      .eq("company_id", companyId)
+      .eq("founder_id", concept.founder_id)
+      .eq("approved_for_voice", true)
+      .eq("eval_holdout", false),
+  ]);
+  const topics = (concept.fingerprint as { topics?: unknown }).topics;
+  const retrieved = retrieveExamples((examples ?? []).map(toRetrievable), {
+    founderId: concept.founder_id,
+    format: concept.format,
+    topics: Array.isArray(topics) ? topics.map(String) : [],
+    text: [concept.title, concept.core_argument, concept.hook].join(" "),
+    today: localToday(concept.founder?.timezone ?? "UTC"),
+  });
+  return {
+    brief_version_id: concept.brief_version_id,
+    voice_profile_version_id: profile?.current?.id ?? null,
+    example_ids: retrieved.map((r) => r.example.id),
+  };
+}
+
+export async function buildDraftInput(
+  db: Db,
+  companyId: string,
+  refs: DraftRefs,
+  target: { conceptId: string; draftId: string | null; guidance: string },
+  judgeModel: string,
+) {
+  const [{ data: concept }, { data: brief }, { data: voice }, { data: examples }, { data: draft }] = await Promise.all([
+    db
+      .from("concepts")
+      .select("*, founder:founders(display_name, role_title)")
+      .eq("company_id", companyId)
+      .eq("id", target.conceptId)
+      .maybeSingle(),
+    db
+      .from("brief_versions")
+      .select("version_no, content, founder_emphasis, approved_facts")
+      .eq("company_id", companyId)
+      .eq("id", refs.brief_version_id)
+      .maybeSingle(),
+    refs.voice_profile_version_id
+      ? db
+          .from("voice_profile_versions")
+          .select("*")
+          .eq("company_id", companyId)
+          .eq("id", refs.voice_profile_version_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    refs.example_ids.length
+      ? db
+          .from("writing_examples")
+          .select("id, body, format, published_at")
+          .eq("company_id", companyId)
+          .in("id", refs.example_ids)
+      : Promise.resolve({ data: [] }),
+    target.draftId
+      ? db
+          .from("drafts")
+          .select("current:draft_versions!drafts_current_version_fk(body)")
+          .eq("company_id", companyId)
+          .eq("id", target.draftId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  if (!concept?.founder || !brief) throw new MissingInputError("The concept or its brief no longer exists.");
+  if (target.draftId && !draft?.current) throw new MissingInputError("The draft to regenerate no longer exists.");
+
+  const snapshot = readSnapshot(brief);
+  const profile = voice ? readVoiceVersion(voice) : null;
+  const order = new Map(refs.example_ids.map((id, i) => [id, i]));
+  const ordered = [...(examples ?? [])].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  const founder = { displayName: concept.founder.display_name, roleTitle: concept.founder.role_title };
+  return {
+    prompt: {
+      founder,
+      founderId: concept.founder_id,
+      monthLabel: monthLabel(concept.target_month.slice(0, 7)),
+      brief: { ...snapshot, versionNo: brief.version_no },
+      concept: {
+        title: concept.title,
+        coreArgument: concept.core_argument,
+        hook: concept.hook,
+        format: concept.format,
+        audience: concept.audience,
+        whyThisFounder: concept.why_this_founder,
+        evidenceRequirements: concept.evidence_requirements,
+        needsPersonalStory: concept.needs_personal_story,
+      },
+      voiceContext: buildVoiceContext({
+        founder,
+        profile,
+        profileVersion: voice?.version_no ?? null,
+        examples: ordered.map((e) => ({ id: e.id, body: e.body, format: e.format, publishedAt: e.published_at })),
+      }),
+      revising: draft?.current ? { body: draft.current.body, guidance: target.guidance } : null,
+    },
+    review: {
+      approvedFacts: snapshot.approvedFacts,
+      avoidPhrases: profile?.avoidPhrases ?? [],
+      styleRules: profile?.styleRules ?? [],
+    },
+    judgeModel,
+  };
+}

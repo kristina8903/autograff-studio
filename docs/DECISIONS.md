@@ -482,6 +482,69 @@ If spend runs high, the levers are, in order:
   `candidate_target_max` minus their live concepts, capped at 8 per batch.
   At most 10 can be asked for.
 
+### D-30: Drafts and review flags. **Decided in Phase 4b (2026-10-22)**
+
+- **Flags are computed in TypeScript and stored per version**
+  (`lib/domain/draft-review.ts`), so old flags never apply to new text.
+  - **Placeholders:** each `[FOUNDER TO SUPPLY: …]` is a blocking flag. It
+    clears only when the text changes.
+  - **Unbacked facts:** a factual claim with no approved fact behind it is
+    blocking. So is first-person experience outside a placeholder.
+  - **Model flags:** competitor claims are blocking; the model's other flags
+    are warnings.
+  - **Lint:** a link not taken from an approved fact, and a post over 3,000
+    characters, are blocking. Stock phrases, the founder's phrases to avoid,
+    em-dashes (when the founder avoids them) and choppy paragraphs are
+    warnings.
+- **Metadata in the post body is rejected, not flagged.** If a generated
+  body contains a "Rationale:", "Sources:" or similar line, or bracketed
+  review notes, the run fails as invalid output and nothing is stored. An
+  admin edit that does it gets a blocking flag.
+- **Resolving and overriding.**
+  - A blocking flag is resolved with a reason (at least 5 characters), or
+    cleared by changing the text. It is never overridden.
+  - A warning, repetition included, can be overridden with a reason.
+  - Overrides are recorded on the flag itself (who, when, why) and in the
+    audit log. That replaces the separate `repetition_overrides` table.
+- **Admin edits.** Placeholder, claim and lint flags are recomputed for the
+  new text; claims carry over only if their words are still there. The
+  model's and the repetition check's flags carry over with their decisions.
+  Repetition is checked again on regeneration, not on manual edits.
+- **Repetition.**
+  - **Pre-filter:** live drafts, the month's live concepts, and published
+    LinkedIn posts from the last 180 days are compared using the same
+    argument key or `pg_trgm` similarity ≥ 0.35. The top 5 are kept.
+  - **Judge:** a model (the cheaper "extract" model, low effort) judges each
+    shortlisted item as none, partial or duplicate.
+  - **Fallback:** if the judge fails, the same argument or similarity ≥ 0.5
+    raises the warning instead.
+  - **Cost:** the judge's cost is part of the run's estimate and actual cost.
+- **Normalization** (PRODUCT_SPEC §7.4): "trailing whitespace" means spaces
+  and tabs. A database test checks that the SQL and TypeScript versions give
+  the same hash on 11 tricky inputs.
+- **Scope held for Phase 7.**
+  - Founders see no drafts yet.
+  - Only drafts in `drafting` or `admin_review` can be edited or regenerated.
+  - `transition_draft` allows: drafting ↔ admin review, either → rejected or
+    archived, and archived → admin review.
+  - Approval, sharing and the approval-invalidating edit path come with
+    founder review.
+
+### D-31: Opt-in evaluations. **Decided in Phase 4b (2026-10-22)**
+
+- `npm run eval:generation` and `npm run eval:voice` make real AI calls, and
+  only when both `EVAL_CONFIRM=1` and an Anthropic key are set.
+  - Each has a **hard $1 cap**. Every call is estimated at its upper bound
+    first and refused if it could pass the cap.
+  - They are never part of `npm test` or CI.
+- They run on a fixed, invented fixture. `eval:voice` can instead read a
+  founder's real held-out examples from a JSON file named in
+  `EVAL_VOICE_FILE`, so real founder text never needs to be in the
+  repository.
+- `eval:voice` shows the writer only the held-out post's topic, then asks a
+  judge model to score, from 1 to 5, how close the draft's voice is to the
+  held-out post (style, not content).
+
 ---
 
 ## 3. Inputs still needed from the user
@@ -506,4 +569,5 @@ If spend runs high, the levers are, in order:
 | 2026-10-21 | Phase 3 built; D-25, D-26 added; D-15 implemented as per-founder style rules |
 | 2026-10-21 | LinkedIn export import; D-27 added |
 | 2026-10-21 | Phase 4a built; D-28, D-29 added |
+| 2026-10-22 | Phase 4b built; D-30, D-31 added |
 | 2026-10-21 | User answers recorded: D-01, D-02, D-04, D-11, D-13, D-14, D-19 accepted; D-09, D-10 accepted on recommendation; D-15 deferred to Phase 3; D-16 and D-21 set by the $100/month budget |
