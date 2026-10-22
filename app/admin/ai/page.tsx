@@ -14,6 +14,9 @@ const KIND_LABEL: Record<string, string> = {
   concept_regen: "Concept regenerated",
   draft: "Draft",
   draft_regen: "Draft regenerated",
+  rewrite: "Founder rewrite",
+  feedback_classification: "Feedback from edits",
+  research: "Research",
 };
 const STATUS_TONE = {
   queued: "accent",
@@ -90,6 +93,7 @@ export default async function AiUsagePage() {
                 brief_version_id?: string;
                 voice_profile_version_id?: string | null;
                 example_ids?: string[];
+                finding_ids?: string[];
               };
               return (
                 <tr key={run.id} className="border-b border-border align-top last:border-0">
@@ -106,9 +110,16 @@ export default async function AiUsagePage() {
                     </span>
                   </td>
                   <td className="px-4 py-2 text-xs text-muted">
-                    {refs.brief_version_id ? "brief" : ""}
-                    {refs.voice_profile_version_id ? " · voice profile" : " · no voice profile"}
-                    {` · ${refs.example_ids?.length ?? 0} examples`}
+                    {run.kind === "research" ? (
+                      "web search"
+                    ) : (
+                      <>
+                        {refs.brief_version_id ? "brief" : ""}
+                        {refs.voice_profile_version_id ? " · voice profile" : " · no voice profile"}
+                        {` · ${refs.example_ids?.length ?? 0} examples`}
+                        {refs.finding_ids?.length ? ` · ${refs.finding_ids.length} findings` : ""}
+                      </>
+                    )}
                     <span className="block">
                       {run.prompt_template} v{run.prompt_template_version}
                     </span>
@@ -125,6 +136,11 @@ export default async function AiUsagePage() {
                   </td>
                   <td className="px-4 py-2 text-xs">
                     {run.input_tokens.toLocaleString("en-US")} / {run.output_tokens.toLocaleString("en-US")}
+                    {run.web_searches ? (
+                      <span className="block text-muted">
+                        {run.web_searches} web search{run.web_searches === 1 ? "" : "es"}
+                      </span>
+                    ) : null}
                     {run.cache_read_tokens ? (
                       <span className="block text-muted">{run.cache_read_tokens.toLocaleString("en-US")} cached</span>
                     ) : null}

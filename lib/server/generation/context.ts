@@ -7,9 +7,10 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { readSnapshot } from "@/lib/domain/briefs";
 import { localToday, monthLabel, type IsoMonth } from "@/lib/domain/dates";
+import { dateLabel } from "@/lib/domain/research";
 import { retrieveExamples } from "@/lib/domain/retrieval";
 import { readVoiceVersion } from "@/lib/domain/voice";
-import type { ConceptPromptInput } from "@/lib/prompts/concepts.v1";
+import type { ConceptPromptInput } from "@/lib/prompts/concepts.v2";
 import { buildVoiceContext } from "@/lib/prompts/voice-context.v1";
 import { EXAMPLE_COLUMNS, toRetrievable } from "@/lib/server/voice";
 import type { Database } from "@/lib/supabase/database.types";
@@ -20,9 +21,70 @@ export type ConceptRefs = {
   brief_version_id: string;
   voice_profile_version_id: string | null;
   example_ids: string[];
+  /** Human-verified research findings offered to the writer (Phase 5; absent on older runs). */
+  finding_ids?: string[];
 };
 
 export class MissingInputError extends Error {}
+
+const MAX_FINDINGS = 20;
+
+export type PromptFinding = { id: string; claim: string; source: string; date: string };
+
+/**
+ * Findings a run may use: verified by a person, from an accepted source,
+ * researched for this month, and either for no concept in particular or for
+ * this one. Newest first.
+ */
+export async function usableFindingIds(
+  db: Db,
+  companyId: string,
+  month: string,
+  conceptId: string | null,
+): Promise<string[]> {
+  const { data } = await db
+    .from("research_findings")
+    .select("id, query:research_queries!inner(target_month, concept_id), source:research_sources!inner(status)")
+    .eq("company_id", companyId)
+    .eq("verification_status", "human_verified")
+    .eq("source.status", "accepted")
+    .eq("query.target_month", `${month.slice(0, 7)}-01`)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return (data ?? [])
+    .filter((f) => f.query.concept_id === null || f.query.concept_id === conceptId)
+    .slice(0, MAX_FINDINGS)
+    .map((f) => f.id);
+}
+
+/**
+ * The recorded findings, in recorded order, that are still verified and
+ * still from an accepted source: one disputed since the run was requested is
+ * left out rather than cited.
+ */
+export async function loadFindings(db: Db, companyId: string, ids: string[] | undefined): Promise<PromptFinding[]> {
+  if (!ids?.length) return [];
+  const { data } = await db
+    .from("research_findings")
+    .select(
+      "id, claim_text, verification_status, source:research_sources!inner(status, title, publisher, published_at, published_at_precision)",
+    )
+    .eq("company_id", companyId)
+    .in("id", ids);
+  const byId = new Map((data ?? []).map((f) => [f.id, f]));
+  return ids.flatMap((id) => {
+    const f = byId.get(id);
+    if (!f || f.verification_status !== "human_verified" || f.source.status !== "accepted") return [];
+    return [
+      {
+        id,
+        claim: f.claim_text,
+        source: f.source.publisher || f.source.title,
+        date: dateLabel(f.source.published_at, f.source.published_at_precision),
+      },
+    ];
+  });
+}
 
 const LIVE_STATUSES = ["proposed", "selected", "drafted"] as const;
 
@@ -72,6 +134,7 @@ export async function resolveConceptRefs(
     brief_version_id: brief.current.id,
     voice_profile_version_id: profile?.current?.id ?? null,
     example_ids: retrieved.map((r) => r.example.id),
+    finding_ids: await usableFindingIds(db, companyId, month, null),
   };
 }
 
@@ -122,6 +185,7 @@ export async function buildConceptInput(
         .in("status", LIVE_STATUSES),
     ]);
   if (!founder || !brief) throw new MissingInputError("The brief or founder for this run no longer exists.");
+  const findings = await loadFindings(db, companyId, refs.finding_ids);
 
   const order = new Map(refs.example_ids.map((id, i) => [id, i]));
   const ordered = [...(examples ?? [])].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
@@ -155,6 +219,7 @@ export async function buildConceptInput(
     otherFounders: (concepts ?? [])
       .filter((c) => c.founder_id !== founderId)
       .map((c) => ({ roleTitle: c.founder?.role_title ?? "Founder", title: c.title })),
+    findings,
     count,
     replacing: replacedRow
       ? { title: replacedRow.title, coreArgument: replacedRow.core_argument, guidance: replacing?.guidance ?? "" }
@@ -172,7 +237,9 @@ export type DraftRefs = ConceptRefs;
 export async function resolveDraftRefs(db: Db, companyId: string, conceptId: string): Promise<DraftRefs> {
   const { data: concept } = await db
     .from("concepts")
-    .select("founder_id, brief_version_id, title, core_argument, hook, format, fingerprint, founder:founders(timezone)")
+    .select(
+      "founder_id, brief_version_id, target_month, title, core_argument, hook, format, fingerprint, founder:founders(timezone)",
+    )
     .eq("company_id", companyId)
     .eq("id", conceptId)
     .maybeSingle();
@@ -204,6 +271,7 @@ export async function resolveDraftRefs(db: Db, companyId: string, conceptId: str
     brief_version_id: concept.brief_version_id,
     voice_profile_version_id: profile?.current?.id ?? null,
     example_ids: retrieved.map((r) => r.example.id),
+    finding_ids: await usableFindingIds(db, companyId, concept.target_month, conceptId),
   };
 }
 
@@ -253,6 +321,7 @@ export async function buildDraftInput(
   ]);
   if (!concept?.founder || !brief) throw new MissingInputError("The concept or its brief no longer exists.");
   if (target.draftId && !draft?.current) throw new MissingInputError("The draft to regenerate no longer exists.");
+  const findings = await loadFindings(db, companyId, refs.finding_ids);
 
   const snapshot = readSnapshot(brief);
   const profile = voice ? readVoiceVersion(voice) : null;
@@ -281,12 +350,14 @@ export async function buildDraftInput(
         profileVersion: voice?.version_no ?? null,
         examples: ordered.map((e) => ({ id: e.id, body: e.body, format: e.format, publishedAt: e.published_at })),
       }),
+      findings: findings.map(({ claim, source, date }) => ({ claim, source, date })),
       revising: draft?.current ? { body: draft.current.body, guidance: target.guidance } : null,
     },
     review: {
       approvedFacts: snapshot.approvedFacts,
       avoidPhrases: profile?.avoidPhrases ?? [],
       styleRules: profile?.styleRules ?? [],
+      findings: findings.map(({ id, claim }) => ({ id, claim })),
     },
     judgeModel,
   };

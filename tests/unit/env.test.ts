@@ -70,6 +70,15 @@ describe("AI settings", () => {
       parseServerEnv({ ...secret, LLM_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "sk-ant-api-test" }).LLM_PROVIDER,
     ).toBe("anthropic");
   });
+  it("keeps research on the fake unless switched on, and then needs the Anthropic key", () => {
+    expect(parseServerEnv(secret).RESEARCH_PROVIDER).toBe("fake");
+    expect(() => parseServerEnv({ ...secret, RESEARCH_PROVIDER: "anthropic" })).toThrow(/ANTHROPIC_API_KEY/);
+    expect(() => parseServerEnv({ ...secret, RESEARCH_PROVIDER: "brave" })).toThrow(/RESEARCH_PROVIDER/);
+    expect(
+      parseServerEnv({ ...secret, RESEARCH_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "sk-ant-api-test" })
+        .RESEARCH_PROVIDER,
+    ).toBe("anthropic");
+  });
   it("rejects a malformed model ID and a short cron secret", () => {
     expect(() => parseServerEnv({ ...secret, LLM_MODEL_DRAFT: "gpt-4" })).toThrow(/LLM_MODEL_DRAFT/);
     expect(() => parseServerEnv({ ...secret, CRON_SECRET: "short" })).toThrow(/CRON_SECRET/);

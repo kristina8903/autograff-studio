@@ -9,6 +9,7 @@ import "server-only";
 import { requireAdmin, requireFounder } from "@/lib/auth/dal";
 import { isIsoDate } from "@/lib/domain/dates";
 import { llmProvider } from "@/lib/providers/llm";
+import { researchProvider } from "@/lib/providers/research";
 import {
   buildConceptInput,
   buildDraftInput,
@@ -167,6 +168,32 @@ function createRunStore(): RunStore {
       return data;
     },
 
+    async researchInput(run) {
+      const row = rows.get(run.id)!;
+      const query = typeof run.params.query === "string" ? run.params.query.trim() : "";
+      if (query.length < 3) throw new RunInputError("The run has no research question.");
+      const { data: settings } = await db
+        .from("settings")
+        .select("research_allowed_domains, research_blocked_domains")
+        .eq("company_id", row.company_id)
+        .maybeSingle();
+      return {
+        query,
+        allowedDomains: settings?.research_allowed_domains ?? [],
+        blockedDomains: settings?.research_blocked_domains ?? [],
+      };
+    },
+
+    async completeResearch(runId, servedModel, usage, searches, payload) {
+      const { error } = await db.rpc("complete_research_run", {
+        p_run_id: runId,
+        p_served_model: servedModel,
+        p_usage: { ...(usageJson(usage) as Record<string, Json>), web_searches: searches },
+        p_payload: payload as unknown as Json,
+      });
+      if (error) throw error;
+    },
+
     async fail(runId, code, message, retryAfterSeconds, usage) {
       const { data, error } = await db.rpc("fail_generation_run", {
         p_run_id: runId,
@@ -200,7 +227,7 @@ function usageJson(usage: {
 /** Runs one just-requested run (called after the admin's request returns). */
 export async function runGenerationNow(runId: string) {
   await requireAdmin();
-  return processRun(createRunStore(), llmProvider(), runId);
+  return processRun(createRunStore(), llmProvider(), runId, researchProvider());
 }
 
 /**
@@ -219,5 +246,5 @@ export async function runFounderGenerationNow(runId: string) {
 export async function runDueGenerations() {
   const db = createSupabaseAdminClient();
   await db.rpc("requeue_stale_runs", {});
-  return processDueRuns(createRunStore(), llmProvider());
+  return processDueRuns(createRunStore(), llmProvider(), undefined, researchProvider());
 }

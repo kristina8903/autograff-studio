@@ -3,7 +3,14 @@ import "server-only";
 // RunStore so the retry and failure rules are unit-tested with the fake
 // provider; the database implementation is lib/server/admin/generation.ts.
 
-import { metadataLeak, reviewDraft, type ClaimRecord, type FlagInput, type ModelFlag } from "@/lib/domain/draft-review";
+import {
+  metadataLeak,
+  reviewDraft,
+  type ClaimRecord,
+  type FlagInput,
+  type ModelFlag,
+  type UsableFinding,
+} from "@/lib/domain/draft-review";
 import type { PostFormat } from "@/lib/domain/formats";
 import { FAILURE_MESSAGES, retryDelaySeconds, type FailureKind } from "@/lib/domain/retry";
 import {
@@ -13,14 +20,14 @@ import {
   conceptRecordSchema,
   type ConceptPromptInput,
   type GeneratedConcept,
-} from "@/lib/prompts/concepts.v1";
+} from "@/lib/prompts/concepts.v2";
 import {
   DRAFT_MAX_OUTPUT_TOKENS,
   buildDraftPrompt,
   draftRecordSchema,
   draftSchema,
   type DraftPromptInput,
-} from "@/lib/prompts/draft.v1";
+} from "@/lib/prompts/draft.v2";
 import {
   FEEDBACK_MAX_OUTPUT_TOKENS,
   buildFeedbackPrompt,
@@ -34,7 +41,24 @@ import {
   repetitionJudgeSchema,
   type RepetitionCandidate,
 } from "@/lib/prompts/repetition-judge.v1";
+import {
+  FINDINGS_MAX_OUTPUT_TOKENS,
+  MAX_FINDINGS_PER_RUN,
+  buildFindingsPrompt,
+  findingsSchema,
+} from "@/lib/prompts/findings.v1";
 import { LlmError, type LlmProvider, type Usage } from "@/lib/providers/llm/types";
+import type { ResearchProvider } from "@/lib/providers/research/types";
+import {
+  MAX_SEARCHES_PER_RUN,
+  canonicalUrl,
+  checkFinding,
+  dateLabel,
+  domainAllowed,
+  hostOf,
+  parseLooseDate,
+  type FindingRecord,
+} from "@/lib/domain/research";
 
 export type ClaimedRun = {
   id: string;
@@ -46,7 +70,7 @@ export type ClaimedRun = {
 
 export type DraftRunInput = {
   prompt: DraftPromptInput;
-  review: { approvedFacts: string[]; avoidPhrases: string[]; styleRules: string[] };
+  review: { approvedFacts: string[]; avoidPhrases: string[]; styleRules: string[]; findings: UsableFinding[] };
   /** The model for the repetition judge (the cheaper "extract" model). */
   judgeModel: string;
 };
@@ -70,6 +94,27 @@ export type DraftPayload = {
 /** A founder's edits to classify: the text before their first edit and the text they approved. */
 export type FeedbackRunInput = { before: string; after: string; format: PostFormat | null };
 
+export type ResearchRunInput = {
+  query: string;
+  allowedDomains: string[];
+  blockedDomains: string[];
+};
+
+export type ResearchPayload = {
+  sources: {
+    url: string;
+    canonical_url: string;
+    title: string;
+    publisher: string;
+    page_age: string | null;
+    published_at: string | null;
+    published_at_precision: "day" | "month" | "year" | "unknown";
+    excerpt: string;
+    findings: FindingRecord[];
+  }[];
+  findings_rejected: number;
+};
+
 export interface RunStore {
   claim(runId?: string): Promise<ClaimedRun | null>;
   conceptInput(run: ClaimedRun): Promise<ConceptPromptInput>;
@@ -78,6 +123,14 @@ export interface RunStore {
   repetitionCandidates(run: ClaimedRun, text: string, argumentKey: string): Promise<RepetitionCandidate[]>;
   completeDraft(runId: string, servedModel: string, usage: Usage, payload: DraftPayload): Promise<void>;
   feedbackInput(run: ClaimedRun): Promise<FeedbackRunInput>;
+  researchInput(run: ClaimedRun): Promise<ResearchRunInput>;
+  completeResearch(
+    runId: string,
+    servedModel: string,
+    usage: Usage,
+    searches: number,
+    payload: ResearchPayload,
+  ): Promise<void>;
   completeFeedback(runId: string, servedModel: string, usage: Usage, signals: FeedbackSignal[]): Promise<number>;
   fail(
     runId: string,
@@ -185,7 +238,6 @@ async function processDraft(store: RunStore, provider: LlmProvider, run: Claimed
     task: "draft",
     model: run.model,
     ...buildDraftPrompt(input.prompt),
-    untrustedContext: [],
     schema: draftSchema,
     maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS,
     effort: "medium",
@@ -232,10 +284,110 @@ async function processFeedback(store: RunStore, provider: LlmProvider, run: Clai
   await store.completeFeedback(run.id, result.servedModel, result.usage, cleanSignals(result.data.signals));
 }
 
-export async function processRun(store: RunStore, provider: LlmProvider, runId?: string): Promise<RunOutcome | null> {
+/**
+ * Web research (docs/INTEGRATIONS.md §3.4): search, keep only sources our
+ * domain lists allow, then a tool-less extraction whose every finding is
+ * checked against its excerpt. Rejected findings are counted, never stored.
+ */
+async function processResearch(
+  store: RunStore,
+  provider: LlmProvider,
+  research: ResearchProvider,
+  run: ClaimedRun,
+  now: Date,
+): Promise<void> {
+  const input = await store.researchInput(run);
+  const found = await research.search({
+    query: input.query,
+    model: run.model,
+    allowedDomains: input.allowedDomains,
+    blockedDomains: input.blockedDomains,
+    maxSearches: MAX_SEARCHES_PER_RUN,
+  });
+  const lists = { allowed: input.allowedDomains, blocked: input.blockedDomains };
+  const seen = new Set<string>();
+  const sources = found.sources.flatMap((source) => {
+    const canonical = canonicalUrl(source.url);
+    if (!canonical || seen.has(canonical) || !domainAllowed(source.url, lists) || !source.excerpts.length) return [];
+    seen.add(canonical);
+    const published = parseLooseDate(source.pageAge, now);
+    return [
+      {
+        url: source.url,
+        canonical_url: canonical,
+        title: source.title.trim().slice(0, 500),
+        publisher: hostOf(source.url) ?? "",
+        page_age: source.pageAge,
+        published_at: published.date,
+        published_at_precision: published.precision,
+        excerpt: source.excerpts.join("\n"),
+        findings: [] as FindingRecord[],
+      },
+    ];
+  });
+  let usage = found.usage;
+  let servedModel = found.servedModel;
+  let rejected = 0;
+  if (sources.length) {
+    let extracted;
+    try {
+      extracted = await provider.generateStructured({
+        task: "findings",
+        model: run.model,
+        ...buildFindingsPrompt(
+          input.query,
+          sources.map((s) => ({
+            title: s.title,
+            publisher: s.publisher,
+            dateLabel: dateLabel(s.published_at, s.published_at_precision),
+            excerpt: s.excerpt,
+          })),
+        ),
+        schema: findingsSchema,
+        maxOutputTokens: FINDINGS_MAX_OUTPUT_TOKENS,
+        effort: "low",
+      });
+    } catch (error) {
+      // The searches were billed: count them with the failure.
+      if (error instanceof LlmError)
+        throw new LlmError(error.kind, error.retryAfterSeconds, addUsage(usage, error.usage ?? zeroUsage()));
+      throw error;
+    }
+    usage = addUsage(usage, extracted.usage);
+    servedModel = extracted.servedModel;
+    for (const finding of extracted.data.findings.slice(0, MAX_FINDINGS_PER_RUN)) {
+      const source = sources[finding.source];
+      const check = source ? checkFinding(finding, source.excerpt, now) : null;
+      if (check?.ok) source.findings.push(check.record);
+      else rejected++;
+    }
+    rejected += Math.max(0, extracted.data.findings.length - MAX_FINDINGS_PER_RUN);
+  }
+  await store.completeResearch(run.id, servedModel, usage, found.searches, {
+    sources,
+    findings_rejected: rejected,
+  });
+}
+
+function zeroUsage(): Usage {
+  return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0 };
+}
+
+export async function processRun(
+  store: RunStore,
+  provider: LlmProvider,
+  runId?: string,
+  research?: ResearchProvider,
+  now: Date = new Date(),
+): Promise<RunOutcome | null> {
   const run = await store.claim(runId);
   if (!run) return null;
   try {
+    if (run.kind === "research") {
+      if (!research) throw new RunInputError("No research provider is configured.");
+      await processResearch(store, provider, research, run, now);
+      return { runId: run.id, status: "succeeded" };
+    }
     if (run.kind === "draft" || run.kind === "draft_regen" || run.kind === "rewrite") {
       await processDraft(store, provider, run);
       return { runId: run.id, status: "succeeded" };
@@ -252,7 +404,6 @@ export async function processRun(store: RunStore, provider: LlmProvider, runId?:
       task: "concepts",
       model: run.model,
       ...prompt,
-      untrustedContext: [],
       schema: conceptBatchSchema,
       maxOutputTokens: CONCEPTS_MAX_OUTPUT_TOKENS,
       effort: "medium",
@@ -278,10 +429,11 @@ export async function processDueRuns(
   store: RunStore,
   provider: LlmProvider,
   { maxRuns = 5, deadline = Date.now() + 240_000 } = {},
+  research?: ResearchProvider,
 ): Promise<RunOutcome[]> {
   const outcomes: RunOutcome[] = [];
   while (outcomes.length < maxRuns && Date.now() < deadline) {
-    const outcome = await processRun(store, provider);
+    const outcome = await processRun(store, provider, undefined, research);
     if (!outcome) break;
     outcomes.push(outcome);
   }

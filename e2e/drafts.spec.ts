@@ -60,7 +60,7 @@ test("a draft is written from a selected concept, with placeholder and claim fla
 
   await admin.goto("/admin/ai");
   await expect(admin.getByRole("table", { name: "Runs" }).getByRole("row").nth(1)).toContainText("Draft");
-  await expect(admin.getByRole("table", { name: "Runs" }).getByRole("row").nth(1)).toContainText("draft v1");
+  await expect(admin.getByRole("table", { name: "Runs" }).getByRole("row").nth(1)).toContainText("draft v2");
 });
 
 test("a second draft of the same argument gets a repetition warning; overriding it needs a reason", async () => {

@@ -15,7 +15,7 @@ import {
   monthOf,
 } from "@/lib/domain/dates";
 import { formatLabel } from "@/lib/domain/formats";
-import { MAX_CONCEPTS_PER_RUN } from "@/lib/prompts/concepts.v1";
+import { MAX_CONCEPTS_PER_RUN } from "@/lib/prompts/concepts.v2";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { WriteDraftForm } from "../drafts/draft-forms";
 import { EditConceptForm, GenerateForm, RegenerateForm, StatusButtons } from "./concept-forms";
@@ -198,7 +198,15 @@ export default async function ConceptsPage({ searchParams }: PageProps<"/admin/c
                           <dd>
                             <ul className="list-disc pl-5">
                               {concept.evidence_requirements.map((e) => (
-                                <li key={e}>{e}</li>
+                                <li key={e}>
+                                  {e}{" "}
+                                  <Link
+                                    href={`/admin/research?${new URLSearchParams({ month, q: e.slice(0, 300), concept: concept.id })}`}
+                                    className="text-xs text-accent hover:underline"
+                                  >
+                                    Research this
+                                  </Link>
+                                </li>
                               ))}
                             </ul>
                           </dd>

@@ -9,6 +9,7 @@ import { WordDiff } from "@/components/word-diff";
 import { requireFounder } from "@/lib/auth/dal";
 import { monthLabel } from "@/lib/domain/dates";
 import { FOUNDER_STATUS_LABELS, approvalBlocker, isEditable } from "@/lib/domain/draft-states";
+import { dateLabel } from "@/lib/domain/research";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   ApproveForm,
@@ -36,14 +37,21 @@ export default async function FounderDraftPage({ params, searchParams }: PagePro
   // Every read goes through a function that returns only this founder's own
   // shared draft, and never the internal rationale or admin-only notes.
   const supabase = await createSupabaseServerClient();
-  const [{ data: drafts }, { data: versions }, { data: flags }, { data: comments }, { data: rewrites }] =
-    await Promise.all([
-      supabase.rpc("founder_drafts"),
-      supabase.rpc("founder_draft_versions", { p_draft_id: id }),
-      supabase.rpc("founder_draft_flags", { p_draft_id: id }),
-      supabase.rpc("founder_comments", { p_draft_id: id }),
-      supabase.rpc("founder_rewrite_requests", { p_draft_id: id }),
-    ]);
+  const [
+    { data: drafts },
+    { data: versions },
+    { data: flags },
+    { data: comments },
+    { data: rewrites },
+    { data: sources },
+  ] = await Promise.all([
+    supabase.rpc("founder_drafts"),
+    supabase.rpc("founder_draft_versions", { p_draft_id: id }),
+    supabase.rpc("founder_draft_flags", { p_draft_id: id }),
+    supabase.rpc("founder_comments", { p_draft_id: id }),
+    supabase.rpc("founder_rewrite_requests", { p_draft_id: id }),
+    supabase.rpc("founder_draft_sources", { p_draft_id: id }),
+  ]);
   const draft = drafts?.find((d) => d.id === id);
   if (!draft || !versions?.length) notFound();
 
@@ -146,6 +154,39 @@ export default async function FounderDraftPage({ params, searchParams }: PagePro
               ) : (
                 <p className="text-sm text-muted">Nothing flagged. Read it through before you approve.</p>
               )}
+            </Card>
+          ) : null}
+
+          {isCurrent && sources?.length ? (
+            <Card>
+              <h2 className="mb-3 text-sm font-semibold">Sources</h2>
+              <ul aria-label="Sources" className="space-y-3 text-sm">
+                {sources.map((s, i) => (
+                  <li key={i}>
+                    <p>“{s.claim_text}”</p>
+                    <p className="mt-1 text-xs text-muted">
+                      {s.source_url ? (
+                        <>
+                          <a
+                            href={s.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="text-accent hover:underline"
+                          >
+                            {s.source_title || s.publisher}
+                          </a>{" "}
+                          · {s.publisher} · {dateLabel(s.published_at, s.published_at_precision)}
+                          {s.finding_quote ? <span className="block">Source says: “{s.finding_quote}”</span> : null}
+                        </>
+                      ) : s.approved_fact ? (
+                        <>From this month&apos;s brief: {s.approved_fact}</>
+                      ) : (
+                        <span className="text-danger">No source yet: see Things to check.</span>
+                      )}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             </Card>
           ) : null}
 

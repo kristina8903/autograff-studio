@@ -20,7 +20,9 @@ export function idempotencyKey(parts: string[]): string {
 
 export async function startRun(request: {
   kind: Kind;
-  founderId: string;
+  founderId: string | null;
+  /** Defaults to the AI provider; research runs name the research provider. */
+  provider?: string;
   month: string;
   model: string;
   template: string;
@@ -33,16 +35,16 @@ export async function startRun(request: {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("request_generation", {
     p_kind: request.kind,
-    p_founder_id: request.founderId,
+    p_founder_id: request.founderId as string,
     p_target_month: `${request.month}-01`,
-    p_provider: llmProvider().name,
+    p_provider: request.provider ?? llmProvider().name,
     p_model: request.model,
     p_prompt_template: request.template,
     p_prompt_template_version: request.templateVersion,
     p_input_refs: request.refs,
     p_params: request.params,
     p_estimated_cost_usd: Number(request.estimate.toFixed(6)),
-    p_idempotency_key: idempotencyKey([request.kind, request.founderId, request.month, ...request.keyParts]),
+    p_idempotency_key: idempotencyKey([request.kind, request.founderId ?? "", request.month, ...request.keyParts]),
   });
   if (error) return { error: "The run could not be requested." };
   const run = data[0];

@@ -13,17 +13,22 @@ const serverEnvSchema = z
     // The fake provider unless explicitly switched on (docs/INTEGRATIONS.md §2).
     LLM_PROVIDER: z.enum(["fake", "anthropic"], { error: "must be fake or anthropic" }).default("fake"),
     ANTHROPIC_API_KEY: z.string().optional(),
+    // Web research: the fake unless switched on; Claude's web search uses the same key (D-06).
+    RESEARCH_PROVIDER: z.enum(["fake", "anthropic"], { error: "must be fake or anthropic" }).default("fake"),
     LLM_MODEL_DRAFT: MODEL.default("claude-opus-5-5"),
     LLM_MODEL_EXTRACT: MODEL.default("claude-sonnet-5-5"),
     // Protects /api/jobs/tick. Vercel Cron sends it as a bearer token.
     CRON_SECRET: z.string().min(16, "must be at least 16 characters").optional(),
   })
   .superRefine((env, ctx) => {
-    if (env.LLM_PROVIDER === "anthropic" && !env.ANTHROPIC_API_KEY?.startsWith("sk-ant-"))
+    if (
+      (env.LLM_PROVIDER === "anthropic" || env.RESEARCH_PROVIDER === "anthropic") &&
+      !env.ANTHROPIC_API_KEY?.startsWith("sk-ant-")
+    )
       ctx.addIssue({
         code: "custom",
         path: ["ANTHROPIC_API_KEY"],
-        message: "must be an Anthropic API key (sk-ant-…) when LLM_PROVIDER is anthropic",
+        message: "must be an Anthropic API key (sk-ant-…) when LLM_PROVIDER or RESEARCH_PROVIDER is anthropic",
       });
   });
 
@@ -33,6 +38,7 @@ const KEYS = [
   "SUPABASE_SECRET_KEY",
   "LLM_PROVIDER",
   "ANTHROPIC_API_KEY",
+  "RESEARCH_PROVIDER",
   "LLM_MODEL_DRAFT",
   "LLM_MODEL_EXTRACT",
   "CRON_SECRET",

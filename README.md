@@ -48,7 +48,7 @@ withdraws the approval. See the [Phase 4](docs/phase-reports/phase-4.md) and
 | Voice profiles, writing examples, feedback | **Built** (Phase 3) |
 | AI generation | **Built** (Phase 4): concepts, drafts, flags, repetition checks; real-AI review on staging pending |
 | Founder review and approval | **Built** (Phase 7): sharing, founder edits, comments, rewrites, version-bound approval |
-| Web research | Not started (Phase 5); provider not chosen |
+| Web research | **Built** (Phase 5): Claude web search behind a provider interface, checked findings, source review; uses the fake until staging has the key |
 | Slack integration | Not started (Phase 6); access and terms **not verified** |
 | LinkedIn publishing and analytics | Not started (Phase 10); access and terms **not verified**. Publishing is manual until then |
 | Production deployment at studio.autograff.ai | Not configured |

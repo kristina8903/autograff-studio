@@ -47,7 +47,7 @@ test("a concept batch is generated and records what it was based on, the model a
   await expect(run).toContainText("Concepts");
   await expect(run).toContainText("Local CEO · 3");
   await expect(run).toContainText("brief · voice profile · 2 examples");
-  await expect(run).toContainText("concepts v1");
+  await expect(run).toContainText("concepts v2");
   await expect(run).toContainText("claude-opus-5-5");
   await expect(run).toContainText("succeeded");
   await expect(run).toContainText(/\$\d/);

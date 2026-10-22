@@ -665,6 +665,13 @@ export type Database = {
             referencedRelation: "draft_versions";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "draft_claims_finding_fk";
+            columns: ["finding_id"];
+            isOneToOne: false;
+            referencedRelation: "research_findings";
+            referencedColumns: ["id"];
+          },
         ];
       };
       draft_versions: {
@@ -1157,6 +1164,7 @@ export type Database = {
           started_at: string | null;
           status: Database["public"]["Enums"]["generation_status"];
           target_month: string | null;
+          web_searches: number;
         };
         ComputedFields: never;
         Insert: {
@@ -1188,6 +1196,7 @@ export type Database = {
           started_at?: string | null;
           status?: Database["public"]["Enums"]["generation_status"];
           target_month?: string | null;
+          web_searches?: number;
         };
         Update: {
           actual_cost_usd?: number | null;
@@ -1218,6 +1227,7 @@ export type Database = {
           started_at?: string | null;
           status?: Database["public"]["Enums"]["generation_status"];
           target_month?: string | null;
+          web_searches?: number;
         };
         Relationships: [
           {
@@ -1405,6 +1415,263 @@ export type Database = {
           },
         ];
       };
+      research_findings: {
+        Row: {
+          claim_text: string;
+          company_id: string;
+          conflicts_with: string[];
+          created_at: string;
+          data: Json | null;
+          event_date: string | null;
+          event_date_precision: Database["public"]["Enums"]["date_precision"];
+          id: string;
+          notes: string;
+          quote: string | null;
+          research_query_id: string;
+          source_id: string;
+          updated_at: string;
+          verification_status: Database["public"]["Enums"]["finding_status"];
+          verified_at: string | null;
+          verified_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          claim_text: string;
+          company_id: string;
+          conflicts_with?: string[];
+          created_at?: string;
+          data?: Json | null;
+          event_date?: string | null;
+          event_date_precision?: Database["public"]["Enums"]["date_precision"];
+          id?: string;
+          notes?: string;
+          quote?: string | null;
+          research_query_id: string;
+          source_id: string;
+          updated_at?: string;
+          verification_status: Database["public"]["Enums"]["finding_status"];
+          verified_at?: string | null;
+          verified_by?: string | null;
+        };
+        Update: {
+          claim_text?: string;
+          company_id?: string;
+          conflicts_with?: string[];
+          created_at?: string;
+          data?: Json | null;
+          event_date?: string | null;
+          event_date_precision?: Database["public"]["Enums"]["date_precision"];
+          id?: string;
+          notes?: string;
+          quote?: string | null;
+          research_query_id?: string;
+          source_id?: string;
+          updated_at?: string;
+          verification_status?: Database["public"]["Enums"]["finding_status"];
+          verified_at?: string | null;
+          verified_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "research_findings_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "research_findings_research_query_id_fkey";
+            columns: ["research_query_id"];
+            isOneToOne: false;
+            referencedRelation: "research_queries";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "research_findings_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "research_sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "research_findings_verified_by_fkey";
+            columns: ["verified_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      research_queries: {
+        Row: {
+          company_id: string;
+          concept_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          findings_rejected: number;
+          generation_run_id: string;
+          id: string;
+          provider: string;
+          query_text: string;
+          sources_already_stored: number;
+          sources_found: number;
+          target_month: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          company_id: string;
+          concept_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          findings_rejected?: number;
+          generation_run_id: string;
+          id?: string;
+          provider: string;
+          query_text: string;
+          sources_already_stored?: number;
+          sources_found?: number;
+          target_month: string;
+        };
+        Update: {
+          company_id?: string;
+          concept_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          findings_rejected?: number;
+          generation_run_id?: string;
+          id?: string;
+          provider?: string;
+          query_text?: string;
+          sources_already_stored?: number;
+          sources_found?: number;
+          target_month?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "research_queries_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "research_queries_concept_id_fkey";
+            columns: ["concept_id"];
+            isOneToOne: false;
+            referencedRelation: "concepts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "research_queries_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "research_queries_generation_run_id_fkey";
+            columns: ["generation_run_id"];
+            isOneToOne: true;
+            referencedRelation: "generation_runs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      research_sources: {
+        Row: {
+          canonical_url: string;
+          company_id: string;
+          content_hash: string;
+          created_at: string;
+          excerpt: string;
+          id: string;
+          page_age_raw: string | null;
+          provider: string;
+          published_at: string | null;
+          published_at_precision: Database["public"]["Enums"]["date_precision"];
+          publisher: string;
+          research_query_id: string;
+          retrieved_at: string;
+          review_note: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          source_tier: Database["public"]["Enums"]["source_tier"];
+          status: Database["public"]["Enums"]["source_status"];
+          title: string;
+          updated_at: string;
+          url: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          canonical_url: string;
+          company_id: string;
+          content_hash: string;
+          created_at?: string;
+          excerpt: string;
+          id?: string;
+          page_age_raw?: string | null;
+          provider: string;
+          published_at?: string | null;
+          published_at_precision?: Database["public"]["Enums"]["date_precision"];
+          publisher?: string;
+          research_query_id: string;
+          retrieved_at?: string;
+          review_note?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          source_tier?: Database["public"]["Enums"]["source_tier"];
+          status?: Database["public"]["Enums"]["source_status"];
+          title?: string;
+          updated_at?: string;
+          url: string;
+        };
+        Update: {
+          canonical_url?: string;
+          company_id?: string;
+          content_hash?: string;
+          created_at?: string;
+          excerpt?: string;
+          id?: string;
+          page_age_raw?: string | null;
+          provider?: string;
+          published_at?: string | null;
+          published_at_precision?: Database["public"]["Enums"]["date_precision"];
+          publisher?: string;
+          research_query_id?: string;
+          retrieved_at?: string;
+          review_note?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          source_tier?: Database["public"]["Enums"]["source_tier"];
+          status?: Database["public"]["Enums"]["source_status"];
+          title?: string;
+          updated_at?: string;
+          url?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "research_sources_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "research_sources_research_query_id_fkey";
+            columns: ["research_query_id"];
+            isOneToOne: false;
+            referencedRelation: "research_queries";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "research_sources_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       review_flags: {
         Row: {
           company_id: string;
@@ -1570,6 +1837,8 @@ export type Database = {
           ai_per_run_ceiling_usd: number;
           allowed_email_domains: string[];
           company_id: string;
+          research_allowed_domains: string[];
+          research_blocked_domains: string[];
           updated_at: string;
           updated_by: string | null;
         };
@@ -1579,6 +1848,8 @@ export type Database = {
           ai_per_run_ceiling_usd?: number;
           allowed_email_domains?: string[];
           company_id: string;
+          research_allowed_domains?: string[];
+          research_blocked_domains?: string[];
           updated_at?: string;
           updated_by?: string | null;
         };
@@ -1587,6 +1858,8 @@ export type Database = {
           ai_per_run_ceiling_usd?: number;
           allowed_email_domains?: string[];
           company_id?: string;
+          research_allowed_domains?: string[];
+          research_blocked_domains?: string[];
           updated_at?: string;
           updated_by?: string | null;
         };
@@ -1897,6 +2170,7 @@ export type Database = {
           started_at: string | null;
           status: Database["public"]["Enums"]["generation_status"];
           target_month: string | null;
+          web_searches: number;
         }[];
         SetofOptions: {
           from: "*";
@@ -1916,6 +2190,10 @@ export type Database = {
       complete_feedback_run: {
         Args: { p_run_id: string; p_served_model: string; p_signals: Json; p_usage: Json };
         Returns: number;
+      };
+      complete_research_run: {
+        Args: { p_payload: Json; p_run_id: string; p_served_model: string; p_usage: Json };
+        Returns: string;
       };
       coverage_slot_counts: {
         Args: { p_founder_id: string; p_month: string };
@@ -1970,6 +2248,21 @@ export type Database = {
           status: Database["public"]["Enums"]["flag_status"];
         }[];
       };
+      founder_draft_sources: {
+        Args: { p_draft_id: string };
+        Returns: {
+          approved_fact: string;
+          claim_text: string;
+          finding_quote: string;
+          finding_status: Database["public"]["Enums"]["finding_status"];
+          published_at: string;
+          published_at_precision: Database["public"]["Enums"]["date_precision"];
+          publisher: string;
+          source_title: string;
+          source_url: string;
+          support_status: Database["public"]["Enums"]["claim_support"];
+        }[];
+      };
       founder_draft_versions: {
         Args: { p_draft_id: string };
         Returns: {
@@ -2009,6 +2302,7 @@ export type Database = {
         }[];
       };
       founder_save_version: { Args: { p_body: string; p_change_note: string; p_draft_id: string }; Returns: number };
+      link_research_findings: { Args: { p_a: string; p_b: string; p_conflict: boolean }; Returns: undefined };
       provision_invited_user: {
         Args: {
           p_founder_id?: string;
@@ -2071,6 +2365,19 @@ export type Database = {
       resolve_comment: { Args: { p_comment_id: string }; Returns: undefined };
       resolve_review_flag: { Args: { p_action: string; p_flag_id: string; p_note: string }; Returns: undefined };
       review_feedback_signal: { Args: { p_decision: string; p_note: string; p_signal_id: string }; Returns: undefined };
+      review_research_finding: {
+        Args: { p_finding_id: string; p_note: string; p_status: Database["public"]["Enums"]["finding_status"] };
+        Returns: undefined;
+      };
+      review_research_source: {
+        Args: {
+          p_note: string;
+          p_source_id: string;
+          p_status: Database["public"]["Enums"]["source_status"];
+          p_tier: Database["public"]["Enums"]["source_tier"];
+        };
+        Returns: undefined;
+      };
       revoke_approval: { Args: { p_draft_id: string; p_reason: string }; Returns: undefined };
       save_brief_version: {
         Args: {
@@ -2134,6 +2441,7 @@ export type Database = {
         Args: { p_concept_id: string; p_status: Database["public"]["Enums"]["concept_status"] };
         Returns: undefined;
       };
+      set_research_domains: { Args: { p_allowed: string[]; p_blocked: string[] }; Returns: undefined };
       set_run_input_refs: { Args: { p_refs: Json; p_run_id: string }; Returns: undefined };
       share_draft: { Args: { p_draft_id: string; p_visible_flag_ids: string[] }; Returns: undefined };
       sync_calendar_slots: {
@@ -2180,6 +2488,7 @@ export type Database = {
       claim_support: "supported" | "weak" | "unsupported" | "disputed" | "not_applicable";
       comment_visibility: "shared" | "admin_internal";
       concept_status: "proposed" | "selected" | "drafted" | "rejected" | "archived";
+      date_precision: "day" | "month" | "year" | "unknown";
       draft_author_kind: "ai" | "admin" | "founder";
       draft_status:
         | "drafting"
@@ -2194,6 +2503,7 @@ export type Database = {
       feedback_kind: "stable_preference" | "format_preference" | "one_off" | "editorial_correction";
       feedback_proposer: "system" | "admin";
       feedback_status: "proposed" | "accepted" | "rejected";
+      finding_status: "unverified" | "machine_supported" | "human_verified" | "disputed" | "rejected";
       flag_kind:
         | "unsupported_claim"
         | "weak_evidence"
@@ -2223,6 +2533,8 @@ export type Database = {
       rewrite_status: "requested" | "completed" | "failed";
       slot_kind: "regular" | "reserved_timely" | "manual";
       slot_status: "open" | "filled" | "skipped";
+      source_status: "candidate" | "accepted" | "rejected";
+      source_tier: "primary" | "reputable_publication" | "secondary" | "discussion" | "unknown";
       user_role: "admin" | "founder";
       user_status: "invited" | "active" | "deactivated";
       visibility_scope: "calendar" | "approved_content" | "drafts";
@@ -2344,6 +2656,7 @@ export const Constants = {
       claim_support: ["supported", "weak", "unsupported", "disputed", "not_applicable"],
       comment_visibility: ["shared", "admin_internal"],
       concept_status: ["proposed", "selected", "drafted", "rejected", "archived"],
+      date_precision: ["day", "month", "year", "unknown"],
       draft_author_kind: ["ai", "admin", "founder"],
       draft_status: [
         "drafting",
@@ -2359,6 +2672,7 @@ export const Constants = {
       feedback_kind: ["stable_preference", "format_preference", "one_off", "editorial_correction"],
       feedback_proposer: ["system", "admin"],
       feedback_status: ["proposed", "accepted", "rejected"],
+      finding_status: ["unverified", "machine_supported", "human_verified", "disputed", "rejected"],
       flag_kind: [
         "unsupported_claim",
         "weak_evidence",
@@ -2399,6 +2713,8 @@ export const Constants = {
       rewrite_status: ["requested", "completed", "failed"],
       slot_kind: ["regular", "reserved_timely", "manual"],
       slot_status: ["open", "filled", "skipped"],
+      source_status: ["candidate", "accepted", "rejected"],
+      source_tier: ["primary", "reputable_publication", "secondary", "discussion", "unknown"],
       user_role: ["admin", "founder"],
       user_status: ["invited", "active", "deactivated"],
       visibility_scope: ["calendar", "approved_content", "drafts"],

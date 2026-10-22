@@ -609,6 +609,60 @@ If spend runs high, the levers are, in order:
 - **Notifications (D-20) are not built.** D-20 stays open. Founders see
   waiting drafts on their dashboard and the Drafts page.
 
+### D-33: Research. **Decided in Phase 5 (2026-10-22)**
+
+- **Provider: the Claude web search tool** (D-06), behind
+  `ResearchProvider`, switched on with `RESEARCH_PROVIDER=anthropic` and the
+  existing Anthropic key. No new vendor. The fake is the default.
+  - **Verified 2026-10-22** against Anthropic's web search tool page
+    (checklist items 10 and 11):
+    - $10 per 1,000 searches, and failed searches are not billed;
+    - `page_age` is when the page was last updated;
+    - page content is encrypted, so only cited passages (up to 150
+      characters each) are readable;
+    - `allowed_domains` and `blocked_domains` can't be combined.
+- **What is kept from a search.**
+  - Kept: the pages the tool returned, and the passages the API cited from
+    them, as the excerpt.
+  - Discarded: the search model's own words.
+  - Search runs directly, without dynamic filtering, so no code runs on web
+    pages. At most 5 searches per run.
+  - Our own domain allow and block lists are applied afterwards, whatever
+    the provider did.
+- **Dates.**
+  - `published_at` is the provider's page date, with a precision (day,
+    month, year or unknown). For Claude it means "published or updated".
+  - Relative ages ("3 days ago") count back from retrieval.
+  - Anything unparseable is unknown, never guessed, and shown as "date
+    unknown".
+  - A finding's event date is separate.
+- **Findings are checked before storage.** A finding is kept only if its
+  quote is in the excerpt (ignoring case, quote style and spacing), every
+  number in it is in the excerpt, and it contains no web address. Rejected
+  findings are counted on the query, never stored.
+  - A finding with a quote or number is `machine_supported`; one with
+    neither is `unverified`.
+  - Only a person sets `human_verified`, and only after accepting its source.
+- **A page is stored once** (canonical URL: https, no "www.", no fragment or
+  tracking parameters). Found again, it keeps its original excerpt and
+  findings, because those were checked against that excerpt.
+- **Generation uses only human-verified findings of accepted sources,**
+  researched for the month (or for that concept), at most 20.
+  - They are recorded on the run (`input_refs.finding_ids`).
+  - They are passed to the model as outside data.
+  - Prompts are now `concepts v2` and `draft v2`.
+  - A claim citing a finding is `supported` only if its numbers match the
+    finding.
+  - A finding disputed or rejected after a draft cites it is shown in red on
+    the admin's draft page. An admin edit then re-checks the claim, which
+    becomes unsupported.
+- **Founders see the sources** of the factual claims in their own shared
+  drafts (`founder_draft_sources`). Research pages are admin-only.
+- **Cost.** A run is estimated at its upper bound before it starts: 5
+  searches, the search model's tokens and the extraction, about $0.40 with
+  Sonnet. Actual searches and cost are recorded on the run and shown on AI
+  usage.
+
 ---
 
 ## 3. Inputs still needed from the user
@@ -635,4 +689,5 @@ If spend runs high, the levers are, in order:
 | 2026-10-21 | Phase 4a built; D-28, D-29 added |
 | 2026-10-22 | Phase 4b built; D-30, D-31 added |
 | 2026-10-22 | Phase 7 built; D-32 added |
+| 2026-10-22 | Phase 5 built; D-33 added; checklist items 10–11 verified |
 | 2026-10-21 | User answers recorded: D-01, D-02, D-04, D-11, D-13, D-14, D-19 accepted; D-09, D-10 accepted on recommendation; D-15 deferred to Phase 3; D-16 and D-21 set by the $100/month budget |

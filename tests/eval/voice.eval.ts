@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { buildDraftPrompt, draftSchema, DRAFT_MAX_OUTPUT_TOKENS } from "@/lib/prompts/draft.v1";
+import { buildDraftPrompt, draftSchema, DRAFT_MAX_OUTPUT_TOKENS } from "@/lib/prompts/draft.v2";
 import { buildVoiceContext } from "@/lib/prompts/voice-context.v1";
 import { BRIEF, VOICE_SET, type VoiceSet } from "./fixtures";
 import { CappedProvider, EVAL_CAP_USD, evalEnabled } from "./budget";
@@ -48,6 +48,7 @@ describe.skipIf(!evalEnabled())(`voice eval (real AI calls, cap $${EVAL_CAP_USD}
             needsPersonalStory: false,
           },
           voiceContext,
+          findings: [],
           revising: null,
         }),
         untrustedContext: [],

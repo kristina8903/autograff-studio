@@ -30,7 +30,7 @@ function tokens(u: {
  * Cost of a response, pricing each model that ran at its own rate: when a
  * refusal was re-run on a fallback model, usage.iterations lists both.
  */
-function usageOf(model: string, usage: BetaUsage): Usage {
+export function usageOf(model: string, usage: BetaUsage): Usage {
   const parts = usage.iterations?.length
     ? usage.iterations.map((part) => ({ tokens: tokens(part), model: ("model" in part && part.model) || model }))
     : [{ tokens: tokens(usage), model }];
@@ -85,15 +85,7 @@ export class AnthropicProvider implements LlmProvider {
         ],
       });
     } catch (error) {
-      // Most specific first: connection errors are also APIErrors, without a status.
-      if (error instanceof Anthropic.APIConnectionTimeoutError) throw new LlmError("timeout");
-      if (error instanceof Anthropic.APIConnectionError) throw new LlmError("network");
-      if (error instanceof Anthropic.APIError) {
-        const retryAfter = Number(error.headers?.get("retry-after") ?? NaN);
-        throw new LlmError(kindFromStatus(error.status), Number.isFinite(retryAfter) ? retryAfter : null);
-      }
-      // Anything else was thrown while reading the answer.
-      throw new LlmError("invalid_output");
+      throw toLlmError(error);
     }
 
     const usage = usageOf(response.model, response.usage);
@@ -104,6 +96,19 @@ export class AnthropicProvider implements LlmProvider {
     if (!parsed.success) throw new LlmError("invalid_output", null, usage);
     return { data: parsed.data, usage, servedModel: response.model };
   }
+}
+
+/** The SDK's errors as the runner's failure kinds (retried or not by kind). */
+export function toLlmError(error: unknown): LlmError {
+  // Most specific first: connection errors are also APIErrors, without a status.
+  if (error instanceof Anthropic.APIConnectionTimeoutError) return new LlmError("timeout");
+  if (error instanceof Anthropic.APIConnectionError) return new LlmError("network");
+  if (error instanceof Anthropic.APIError) {
+    const retryAfter = Number(error.headers?.get("retry-after") ?? NaN);
+    return new LlmError(kindFromStatus(error.status), Number.isFinite(retryAfter) ? retryAfter : null);
+  }
+  // Anything else was thrown while reading the answer.
+  return new LlmError("invalid_output");
 }
 
 function tag(label: string): string {

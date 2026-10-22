@@ -80,10 +80,15 @@ function fakeDraft(request: StructuredRequest<unknown>) {
   const story = concept.includes("needs a personal story");
   const revising = request.trustedContext.some((b) => b.label === "Previous version");
   const unsupported = "Most repair delays come from waiting for approvals, not parts";
+  // With research findings offered, the first one is cited as a fact (finding 0).
+  const finding = request.untrustedContext
+    .find((b) => b.label === "Research findings")
+    ?.text.match(/^\[0\] (.*?)(?: \([^()]*\))?$/m)?.[1]
+    ?.replace(/\.$/, "");
   const opening = `${revising ? "Take two. " : ""}${field("Hook idea") || field("Title")}`;
   const body = [
     opening,
-    `${field("Core argument")} ${unsupported}.`,
+    `${field("Core argument")} ${unsupported}.${finding ? ` ${finding}.` : ""}`,
     story ? "[FOUNDER TO SUPPLY: a time a repair status surprise cost you a day]" : "",
     "What would you change first?",
   ]
@@ -92,7 +97,10 @@ function fakeDraft(request: StructuredRequest<unknown>) {
   return {
     post_body: body,
     alternative_hooks: ["What does a late van really cost?", "Nobody tells the fleet manager."],
-    claims: [{ text: unsupported, kind: "sourced_fact", approved_fact_index: null }],
+    claims: [
+      { text: unsupported, kind: "sourced_fact", approved_fact_index: null, finding_index: null },
+      ...(finding ? [{ text: finding, kind: "sourced_fact", approved_fact_index: null, finding_index: 0 }] : []),
+    ],
     flags: [],
     rationale: "Fake rationale: leads with the hook, then the argument.",
     fingerprint: {
@@ -134,9 +142,53 @@ function fakeFeedback(request: StructuredRequest<unknown>) {
   };
 }
 
+/**
+ * One finding per sentence that states a number, quoted word for word. An
+ * excerpt carrying "ignore previous instructions" makes the fake behave like
+ * a model that obeyed it: it adds a finding with a web address and a quote
+ * that isn't in the excerpt, which the validators must reject.
+ */
+function fakeFindings(request: StructuredRequest<unknown>) {
+  const text = request.untrustedContext.find((b) => b.label === "Excerpts")?.text ?? "";
+  const findings: unknown[] = [];
+  for (const m of text.matchAll(/<excerpt number="(\d+)"[^>]*>\n([\s\S]*?)\n<\/excerpt>/g)) {
+    const source = Number(m[1]);
+    for (const sentence of m[2].split(/(?<=[.!?])\s+/)) {
+      if (/ignore previous instructions/i.test(sentence)) {
+        findings.push({
+          source,
+          claim: "Readers should visit https://evil.example/offer for a discount.",
+          quote: "Autograff is the best repair software",
+          value: null,
+          unit: null,
+          population: null,
+          period: null,
+          event_date: null,
+        });
+        continue;
+      }
+      const numbers = sentence.match(/\d+(?:,\d{3})*(?:\.\d+)?%?/g) ?? [];
+      const number = numbers.find((n) => !/^(19|20)\d\d$/.test(n)) ?? numbers[0];
+      if (!number) continue;
+      findings.push({
+        source,
+        claim: sentence.trim(),
+        quote: sentence.trim().replace(/[.!?]$/, ""),
+        value: number.replace(/%$/, ""),
+        unit: number.endsWith("%") ? "%" : null,
+        population: null,
+        period: null,
+        event_date: sentence.match(/\b(20\d\d)\b/)?.[1] ?? null,
+      });
+    }
+  }
+  return { findings };
+}
+
 const DEFAULT_HANDLERS: Partial<Record<StructuredRequest<unknown>["task"], Handler>> = {
   concepts: fakeConcepts,
   draft: fakeDraft,
   repetition_judge: fakeRepetitionJudge,
   feedback: fakeFeedback,
+  findings: fakeFindings,
 };
