@@ -8,7 +8,13 @@ import "server-only";
 import { requireAdmin } from "@/lib/auth/dal";
 import { isIsoDate } from "@/lib/domain/dates";
 import { llmProvider } from "@/lib/providers/llm";
-import { buildConceptInput, MissingInputError, type ConceptRefs } from "@/lib/server/generation/context";
+import {
+  buildConceptInput,
+  buildDraftInput,
+  MissingInputError,
+  type ConceptRefs,
+} from "@/lib/server/generation/context";
+import type { RepetitionCandidate } from "@/lib/prompts/repetition-judge.v1";
 import {
   processDueRuns,
   processRun,
@@ -72,6 +78,58 @@ function createRunStore(): RunStore {
       });
       if (error) throw error;
       return data;
+    },
+
+    async draftInput(run) {
+      const row = rows.get(run.id)!;
+      const draftId = typeof run.params.draft_id === "string" ? run.params.draft_id : null;
+      let conceptId = typeof run.params.concept_id === "string" ? run.params.concept_id : null;
+      if (draftId && !conceptId) {
+        const { data } = await db
+          .from("drafts")
+          .select("concept_id")
+          .eq("id", draftId)
+          .eq("company_id", row.company_id)
+          .maybeSingle();
+        conceptId = data?.concept_id ?? null;
+      }
+      if (!conceptId) throw new RunInputError("The draft has no concept to write from.");
+      try {
+        return await buildDraftInput(
+          db,
+          row.company_id,
+          row.input_refs as unknown as ConceptRefs,
+          { conceptId, draftId, guidance: String(run.params.guidance ?? "") },
+          String(run.params.judge_model ?? run.model),
+        );
+      } catch (error) {
+        if (error instanceof MissingInputError) throw new RunInputError(error.message);
+        throw error;
+      }
+    },
+
+    async repetitionCandidates(run, text, argumentKey) {
+      const row = rows.get(run.id)!;
+      const { data, error } = await db.rpc("repetition_candidates", {
+        p_company_id: row.company_id,
+        p_text: text,
+        p_argument_key: argumentKey,
+        p_month: row.target_month!,
+        p_exclude_draft_id: (typeof run.params.draft_id === "string" ? run.params.draft_id : null) as string,
+        p_exclude_concept_id: (typeof run.params.concept_id === "string" ? run.params.concept_id : null) as string,
+      });
+      if (error) throw error;
+      return (data ?? []) as RepetitionCandidate[];
+    },
+
+    async completeDraft(runId, servedModel, usage, payload) {
+      const { error } = await db.rpc("complete_draft_run", {
+        p_run_id: runId,
+        p_served_model: servedModel,
+        p_usage: usageJson(usage),
+        p_payload: payload as unknown as Json,
+      });
+      if (error) throw error;
     },
 
     async fail(runId, code, message, retryAfterSeconds, usage) {

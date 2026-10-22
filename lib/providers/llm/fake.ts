@@ -69,4 +69,57 @@ function fakeConcepts(request: StructuredRequest<unknown>) {
   };
 }
 
-const DEFAULT_HANDLERS: Partial<Record<StructuredRequest<unknown>["task"], Handler>> = { concepts: fakeConcepts };
+/**
+ * A draft built from the concept block. It always states one fact that no
+ * approved fact backs (so the claim rules have something to flag), and uses a
+ * placeholder when the concept needs a personal story.
+ */
+function fakeDraft(request: StructuredRequest<unknown>) {
+  const concept = request.trustedContext.find((b) => b.label === "Concept")?.text ?? "";
+  const field = (name: string) => concept.match(new RegExp(`^${name}: (.*)$`, "m"))?.[1] ?? "";
+  const story = concept.includes("needs a personal story");
+  const revising = request.trustedContext.some((b) => b.label === "Previous version");
+  const unsupported = "Most repair delays come from waiting for approvals, not parts";
+  const opening = `${revising ? "Take two. " : ""}${field("Hook idea") || field("Title")}`;
+  const body = [
+    opening,
+    `${field("Core argument")} ${unsupported}.`,
+    story ? "[FOUNDER TO SUPPLY: a time a repair status surprise cost you a day]" : "",
+    "What would you change first?",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  return {
+    post_body: body,
+    alternative_hooks: ["What does a late van really cost?", "Nobody tells the fleet manager."],
+    claims: [{ text: unsupported, kind: "sourced_fact", approved_fact_index: null }],
+    flags: [],
+    rationale: "Fake rationale: leads with the hook, then the argument.",
+    fingerprint: {
+      topics: ["repair operations"],
+      argument_key: field("Title").toLowerCase(),
+      hook_type: "question",
+      opening_line: opening,
+      format: "story",
+      audience: "fleet operations",
+      product_mentions: [],
+      cta: "none",
+    },
+  };
+}
+
+/** Marks every shortlisted item as a partial overlap. */
+function fakeRepetitionJudge(request: StructuredRequest<unknown>) {
+  const ids = [
+    ...(request.trustedContext.find((b) => b.label === "Earlier content")?.text ?? "").matchAll(/<item id="([^"]+)"/g),
+  ];
+  return {
+    items: ids.map((m) => ({ id: m[1], overlap: "partial", explanation: "Fake judge: the same argument." })),
+  };
+}
+
+const DEFAULT_HANDLERS: Partial<Record<StructuredRequest<unknown>["task"], Handler>> = {
+  concepts: fakeConcepts,
+  draft: fakeDraft,
+  repetition_judge: fakeRepetitionJudge,
+};

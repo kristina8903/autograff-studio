@@ -18,7 +18,9 @@
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local 2>/dev/null > lib/supabase/database.types.ts && prettier --write lib/supabase/database.types.ts",
     "env:local": "node scripts/write-local-env.mjs",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm test"
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "eval:generation": "vitest run --config vitest.eval.config.mts tests/eval/generation.eval.ts",
+    "eval:voice": "vitest run --config vitest.eval.config.mts tests/eval/voice.eval.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.0.0",

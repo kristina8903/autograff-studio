@@ -9,7 +9,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "AI usage" };
 
-const KIND_LABEL: Record<string, string> = { concept_batch: "Concepts", concept_regen: "Concept regenerated" };
+const KIND_LABEL: Record<string, string> = {
+  concept_batch: "Concepts",
+  concept_regen: "Concept regenerated",
+  draft: "Draft",
+  draft_regen: "Draft regenerated",
+};
 const STATUS_TONE = {
   queued: "accent",
   running: "accent",
