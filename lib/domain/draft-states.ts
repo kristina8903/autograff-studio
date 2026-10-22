@@ -1,8 +1,9 @@
 // The draft state machine (PRODUCT_SPEC §7.1), by role. The database
-// functions enforce the same table: transition_draft and share_draft for the
-// admin; approve_draft, request_changes, founder_reject_draft and
-// revoke_approval for the founder. Scheduling and publishing come later
-// (Phases 8 and 9), and only from a validly approved draft.
+// functions enforce the same table: transition_draft, share_draft,
+// schedule_draft, unschedule_draft and record_publication for the admin;
+// approve_draft, request_changes, founder_reject_draft and revoke_approval
+// for the founder. Scheduling and publishing pass the publish gate
+// (PRODUCT_SPEC §8.1): a valid approval of the current version.
 
 export const DRAFT_STATUS_LABELS = {
   drafting: "drafting",
@@ -34,16 +35,20 @@ const ADMIN_NEXT: Partial<Record<DraftStatus, DraftStatus[]>> = {
   admin_review: ["drafting", "founder_review", "rejected", "archived"],
   founder_review: ["admin_review", "rejected", "archived"],
   changes_requested: ["admin_review", "founder_review", "rejected", "archived"],
-  // Withdraws the founder's approval.
-  approved: ["admin_review", "rejected", "archived"],
+  // Back to admin review withdraws the founder's approval; scheduling and
+  // publishing keep it.
+  approved: ["admin_review", "scheduled", "published", "rejected", "archived"],
+  // Rescheduling stays scheduled; unscheduling goes back to approved.
+  scheduled: ["approved", "admin_review", "published", "rejected", "archived"],
   archived: ["admin_review"],
 };
 
 const FOUNDER_NEXT: Partial<Record<DraftStatus, DraftStatus[]>> = {
   founder_review: ["approved", "changes_requested", "rejected"],
   changes_requested: ["rejected"],
-  // Revoking their approval.
+  // Revoking their approval (which also unschedules).
   approved: ["founder_review"],
+  scheduled: ["founder_review"],
 };
 
 export function nextStates(status: DraftStatus, role: DraftRole = "admin"): DraftStatus[] {
@@ -60,14 +65,15 @@ export function founderVisible(status: DraftStatus): boolean {
 }
 
 /**
- * Whether the role can save a new version. An edit to an approved draft that
- * changes its normalized text withdraws the approval (§7.4).
+ * Whether the role can save a new version. An edit to an approved or
+ * scheduled draft that changes its normalized text withdraws the approval
+ * and unschedules it (§7.4).
  */
 export function isEditable(status: DraftStatus, role: DraftRole = "admin"): boolean {
   const editable: DraftStatus[] =
     role === "admin"
-      ? ["drafting", "admin_review", "founder_review", "changes_requested", "approved"]
-      : ["founder_review", "changes_requested", "approved"];
+      ? ["drafting", "admin_review", "founder_review", "changes_requested", "approved", "scheduled"]
+      : ["founder_review", "changes_requested", "approved", "scheduled"];
   return editable.includes(status);
 }
 

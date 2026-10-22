@@ -663,6 +663,54 @@ If spend runs high, the levers are, in order:
   Sonnet. Actual searches and cost are recorded on the run and shown on AI
   usage.
 
+### D-34: Publishing. **Decided in Phase 9 (2026-10-22)**
+
+- **One gate.** `private.publish_gate` is called by every path that
+  schedules, copies or records a post. It requires:
+  - an approved or scheduled draft;
+  - a live approval whose hash and opening line match the current version,
+    from the draft's own founder (D-32);
+  - no open blocking flag.
+
+  A draft forced to `approved` by a direct database write still fails it.
+  Only these functions set `scheduled` or `published`.
+- **The text to post** is the approved body, with the chosen opening line
+  (if any) in place of the body's first line. A one-line body gets the line
+  above it. The same rule exists in SQL and TypeScript.
+  - "Copy approved text" asks the server for it while the gate holds, never
+    the text on screen. Copying is audited.
+  - Line breaks may be stored as CRLF, because browsers submit textareas
+    that way. The copy is byte-for-byte the stored text, and equal to what
+    the founder saw after normalization.
+- **Scheduling** sets a date and time in the founder's time zone, optionally
+  in one of their slots on that day. Rescheduling and unscheduling keep the
+  approval. Unscheduling keeps the date as a proposal.
+  - A material edit, a rewrite, the founder withdrawing approval, or the
+    admin taking the draft back all unschedule it and free its slot.
+- **Recording.**
+  - Only one publication per draft is allowed.
+  - It must have a LinkedIn link and a time no later than now (allowing an
+    hour of clock difference).
+  - "Posted exactly as approved" stores the approved text. Otherwise the
+    pasted text is stored.
+  - Whether the posted text differs is judged after normalization.
+  - A difference is shown as a word diff and audited. It is also proposed to
+    the admin as a one-off feedback signal, at no AI cost.
+  - A published draft is final: it can't be edited, rescheduled or archived.
+- **External posts** (made outside the studio) have no draft or approval
+  and never count as studio posts. Each becomes a `published_linkedin`
+  writing example, which is what the repetition check reads.
+- **Published studio posts become writing examples** by default, not
+  approved for voice: the admin decides whether the AI-assisted text should
+  shape the voice. There is a setting on the Publications page.
+- **Metrics** are entered by hand as whole numbers for six known fields, as
+  an append-only series. Reports use each post's latest snapshot. A metric a
+  snapshot left out is excluded from that metric's average, not counted as
+  zero.
+- **Reports** count posts in each founder's own calendar month, against the
+  cadence's range. They show the brief's theme and the concept's format for
+  studio posts, and "Outside the studio" for external ones.
+
 ---
 
 ## 3. Inputs still needed from the user
@@ -690,4 +738,5 @@ If spend runs high, the levers are, in order:
 | 2026-10-22 | Phase 4b built; D-30, D-31 added |
 | 2026-10-22 | Phase 7 built; D-32 added |
 | 2026-10-22 | Phase 5 built; D-33 added; checklist items 10–11 verified |
+| 2026-10-22 | Phase 9 built; D-34 added |
 | 2026-10-21 | User answers recorded: D-01, D-02, D-04, D-11, D-13, D-14, D-19 accepted; D-09, D-10 accepted on recommendation; D-15 deferred to Phase 3; D-16 and D-21 set by the $100/month budget |

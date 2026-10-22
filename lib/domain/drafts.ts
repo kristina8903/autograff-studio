@@ -52,3 +52,15 @@ export function selectedHook(version: VersionText): string | null {
 export function isMaterialEdit(before: VersionText, after: VersionText): boolean {
   return bodyHash(before.body) !== bodyHash(after.body) || selectedHook(before) !== selectedHook(after);
 }
+
+/**
+ * The text as it will be posted (SQL: private.publishable_text): the body,
+ * with the chosen opening line in place of its first line; a one-line body
+ * gets the chosen line above it.
+ */
+export function publishableText(version: VersionText): string {
+  if (version.selectedHookIndex === null) return version.body;
+  const hook = version.alternativeHooks[version.selectedHookIndex] ?? "";
+  const newline = version.body.indexOf("\n");
+  return newline >= 0 ? hook + version.body.slice(newline) : `${hook}\n\n${version.body}`;
+}

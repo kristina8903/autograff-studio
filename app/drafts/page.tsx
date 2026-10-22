@@ -14,7 +14,14 @@ export default async function FounderDraftsPage() {
   const viewer = await requireFounder();
   const supabase = await createSupabaseServerClient();
   // Only this founder's own drafts that the admin shared with them.
-  const { data: drafts } = await supabase.rpc("founder_drafts");
+  const [{ data: drafts }, { data: publishing }, { data: founder }] = await Promise.all([
+    supabase.rpc("founder_drafts"),
+    supabase.rpc("founder_publishing"),
+    // Row-level security returns only this founder's own record.
+    supabase.from("founders").select("timezone").maybeSingle(),
+  ]);
+  const timeZone = founder?.timezone ?? "UTC";
+  const when = new Map((publishing ?? []).map((p) => [p.draft_id, p]));
   const waiting = (drafts ?? []).filter((d) => d.status === "founder_review");
 
   return (
@@ -31,6 +38,7 @@ export default async function FounderDraftsPage() {
               <th className="px-4 py-2 font-medium">Month</th>
               <th className="px-4 py-2 font-medium">Status</th>
               <th className="px-4 py-2 font-medium">Version</th>
+              <th className="px-4 py-2 font-medium">Goes out</th>
             </tr>
           </thead>
           <tbody>
@@ -48,11 +56,35 @@ export default async function FounderDraftsPage() {
                   </Badge>
                 </td>
                 <td className="px-4 py-2 text-muted">v{d.version_no}</td>
+                <td className="px-4 py-2 text-muted">
+                  {when.get(d.id)?.published_at ? (
+                    <a
+                      href={when.get(d.id)!.linkedin_url!}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      className="text-accent hover:underline"
+                    >
+                      Published{" "}
+                      {new Date(when.get(d.id)!.published_at!).toLocaleDateString("en-US", {
+                        dateStyle: "medium",
+                        timeZone,
+                      })}
+                    </a>
+                  ) : when.get(d.id)?.scheduled_for ? (
+                    new Date(when.get(d.id)!.scheduled_for!).toLocaleString("en-US", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                      timeZone,
+                    })
+                  ) : (
+                    "—"
+                  )}
+                </td>
               </tr>
             ))}
             {drafts?.length ? null : (
               <tr>
-                <td className="px-4 py-3 text-muted" colSpan={4}>
+                <td className="px-4 py-3 text-muted" colSpan={5}>
                   Nothing to review yet. Drafts appear here when the admin shares them with you.
                 </td>
               </tr>
