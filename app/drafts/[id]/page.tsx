@@ -44,6 +44,8 @@ export default async function FounderDraftPage({ params, searchParams }: PagePro
     { data: comments },
     { data: rewrites },
     { data: sources },
+    { data: publishing },
+    { data: founder },
   ] = await Promise.all([
     supabase.rpc("founder_drafts"),
     supabase.rpc("founder_draft_versions", { p_draft_id: id }),
@@ -51,7 +53,12 @@ export default async function FounderDraftPage({ params, searchParams }: PagePro
     supabase.rpc("founder_comments", { p_draft_id: id }),
     supabase.rpc("founder_rewrite_requests", { p_draft_id: id }),
     supabase.rpc("founder_draft_sources", { p_draft_id: id }),
+    supabase.rpc("founder_publishing"),
+    // Row-level security returns only this founder's own record.
+    supabase.from("founders").select("timezone").maybeSingle(),
   ]);
+  const timeZone = founder?.timezone ?? "UTC";
+  const goesOut = (publishing ?? []).find((p) => p.draft_id === id);
   const draft = drafts?.find((d) => d.id === id);
   if (!draft || !versions?.length) notFound();
 
@@ -86,6 +93,30 @@ export default async function FounderDraftPage({ params, searchParams }: PagePro
         <Badge tone={draft.approved ? "success" : "accent"}>
           {FOUNDER_STATUS_LABELS[draft.status] ?? draft.status}
         </Badge>
+        {goesOut?.published_at && goesOut.linkedin_url ? (
+          <a
+            href={goesOut.linkedin_url}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+            className="text-sm text-accent hover:underline"
+          >
+            Published{" "}
+            {new Date(goesOut.published_at).toLocaleString("en-US", {
+              dateStyle: "medium",
+              timeStyle: "short",
+              timeZone,
+            })}
+          </a>
+        ) : goesOut?.scheduled_for ? (
+          <span className="text-sm">
+            Scheduled for{" "}
+            {new Date(goesOut.scheduled_for).toLocaleString("en-US", {
+              dateStyle: "medium",
+              timeStyle: "short",
+              timeZone,
+            })}
+          </span>
+        ) : null}
         {rewriting ? (
           <span role="status" className="text-sm text-muted">
             Writing a new version…
@@ -228,12 +259,12 @@ export default async function FounderDraftPage({ params, searchParams }: PagePro
               <ApproveForm draftId={id} versionId={current.id} versionNo={current.version_no} blocker={blocker} />
             </Card>
           ) : null}
-          {draft.status === "approved" ? (
+          {draft.status === "approved" || draft.status === "scheduled" ? (
             <Card className="h-fit">
               <h2 className="mb-1 text-sm font-semibold">You approved version {current.version_no}</h2>
               <p className="mb-3 text-xs text-muted">
-                The admin will schedule it. Editing the text, or a rewrite, withdraws your approval until you approve
-                again.
+                {draft.status === "scheduled" ? "It is scheduled. " : "The admin will schedule it. "}Editing the text,
+                or a rewrite, withdraws your approval (and unschedules it) until you approve again.
               </p>
               <RevokeForm draftId={id} />
             </Card>

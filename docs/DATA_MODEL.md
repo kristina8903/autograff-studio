@@ -159,6 +159,35 @@
 >   CHECK ensures `human_verified` always names who verified it.
 > - All three are admin-only. Founders see only the sources behind their own
 >   shared drafts' claims.
+>
+> **Implemented in Phase 9 (migration `20261024000001_publishing.sql`):**
+> `publications`, `performance_snapshots`, `settings.publications_become_examples`,
+> the foreign key from `calendar_slots.draft_id` (one slot per draft), a CHECK
+> that only scheduled or published drafts have `scheduled_for`, and these
+> functions:
+>
+> - the gate `private.publish_gate` and `private.publishable_text`;
+> - admin: `schedule_draft`, `unschedule_draft`, `approved_text`,
+>   `record_publication`, `record_external_publication`,
+>   `add_performance_snapshot` and `set_publications_become_examples`;
+> - founder: `founder_publishing`;
+> - replaced so a scheduled draft can be edited, rewritten, revoked or
+>   withdrawn: `transition_draft`, `revoke_approval`, `save_draft_version`,
+>   `founder_save_version`, `request_rewrite` and `complete_draft_run`.
+>
+> Differences from the proposal below (D-34):
+>
+> - `publications` adds `founder_id` and `approved_text`, the text as it was
+>   to be posted.
+>   - `draft_id` is null for an external post, which has no draft (CHECK).
+>   - There is no stored `diff`: the word diff of `approved_text` and
+>     `published_text` is computed when shown.
+>   - A LinkedIn link is required, and unique per company.
+>   - Publications and snapshots are insert-only for every role.
+> - `calendar_slots` has no `slot_time`: the time is on the draft
+>   (`scheduled_for`).
+> - Publications and metrics are admin-only. Founders see their own
+>   scheduled and published dates and links through `founder_publishing`.
 
 Status: **Phase 0 proposal**, 2026-10-21. Postgres (Supabase). Nothing here is
 migrated yet. Table and column names are proposals that will be finalized in

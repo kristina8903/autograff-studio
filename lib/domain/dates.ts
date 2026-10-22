@@ -113,3 +113,50 @@ export function shortDateLabel(date: IsoDate): string {
     timeZone: "UTC",
   });
 }
+
+/** "2026-11-03T09:30" in a time zone, as wall-clock fields. */
+export function localDateTime(timeZone: string, at: Date): string {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(at)
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+/**
+ * The instant at which a time zone's clock reads `local` ("2026-11-03T09:30"),
+ * or null if the text isn't such a time. In a daylight-saving gap the clock
+ * skips, the later reading is used; in an overlap, the earlier instant.
+ */
+export function zonedToUtc(local: string, timeZone: string): Date | null {
+  const m = local.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  const asUtc = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  if (new Date(asUtc).toISOString().slice(0, 16) !== local) return null;
+  // The zone's offset at a guess, corrected once for a change of offset in between.
+  const offsetAt = (t: number) => {
+    const shown = localDateTime(timeZone, new Date(t));
+    const [d, h] = shown.split("T");
+    const [y, mo, da] = d.split("-").map(Number);
+    const [hh, mm] = h.split(":").map(Number);
+    return Date.UTC(y, mo - 1, da, hh, mm) - t;
+  };
+  let t = asUtc - offsetAt(asUtc);
+  t = asUtc - offsetAt(t);
+  const shown = (x: number) => localDateTime(timeZone, new Date(x));
+  const candidates = [t, asUtc - offsetAt(t - 3 * 3_600_000), asUtc - offsetAt(t + 3 * 3_600_000)];
+  const exact = candidates.filter((x) => shown(x) === local).sort((a, b) => a - b);
+  if (exact.length) return new Date(exact[0]);
+  // A time skipped by the clock: the first reading after it.
+  const after = candidates.filter((x) => shown(x) > local).sort((a, b) => a - b);
+  return new Date(after[0] ?? t);
+}

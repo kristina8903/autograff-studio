@@ -494,6 +494,10 @@ batch through the fake provider.
 
 ## Phase 9: Assisted publishing and reporting
 
+**Status:** built and tested locally, 2026-10-22; see the
+[Phase 9 report](phase-reports/phase-9.md). The definition of done (MVP
+acceptance criteria passing on staging) is checked on staging after merge.
+
 **Goal.** Close the loop: schedule approved posts, copy the exact approved
 text, record what was actually published, and report on it.
 
