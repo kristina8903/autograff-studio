@@ -37,8 +37,9 @@ the same change when behavior changes.
   drafts) is built and tested (2026-10-22); its definition of done waits on
   the manual review of real staging drafts. Phase 7 (review and approval) is
   built and tested (2026-10-22); its definition of done waits on the founders
-  trying it on staging. Phase 5 (research) is next in the agreed order and is
-  not approved to start.**
+  trying it on staging. Phase 5 (industry research) is built and tested
+  (2026-10-22); its real web search runs once staging has the key. Phase 9
+  is next in the agreed order and is not approved to start.**
 - Phase order is agreed (D-19): 1, 2, 3, 4, 7, 5, 9, 8, go-live, 6, 10.
 - End each phase with a report:
   - what was built;

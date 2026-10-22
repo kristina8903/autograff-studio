@@ -200,3 +200,35 @@ it("diffWords marks added and removed words", () => {
     { kind: "added", text: "c" },
   ]);
 });
+
+describe("claims backed by research findings (Phase 5 criterion 3)", () => {
+  const findings = [{ id: "f-1", claim: "About 27% of delays came from waiting for approvals in 2025." }];
+  const body = "About 27% of repair delays came from waiting for approvals. That is a process problem.";
+  const claim = (patch: Partial<{ text: string; finding_index: number | null }>) => ({
+    text: "About 27% of repair delays came from waiting for approvals",
+    kind: "sourced_fact" as const,
+    approved_fact_index: null,
+    finding_index: 0,
+    ...patch,
+  });
+
+  it("a claim citing a verified finding is supported and linked to it", () => {
+    const { records, flags } = reviewClaims(body, [claim({})], [], findings);
+    expect(records).toEqual([expect.objectContaining({ finding_id: "f-1", support_status: "supported" })]);
+    expect(flags).toEqual([]);
+  });
+
+  it("a claim whose numbers differ from its finding is unsupported", () => {
+    const { records, flags } = reviewClaims(body, [claim({ text: "About 37% of repair delays" })], [], findings);
+    expect(records[0]).toMatchObject({ finding_id: null, support_status: "unsupported" });
+    expect(flags[0].message).toMatch(/numbers differ/);
+  });
+
+  it("a claim citing no finding, or one that isn't offered, is unsupported", () => {
+    for (const finding_index of [null, 3]) {
+      const { records, flags } = reviewClaims(body, [claim({ finding_index })], [], findings);
+      expect(records[0]).toMatchObject({ finding_id: null, support_status: "unsupported" });
+      expect(flags[0]).toMatchObject({ kind: "unsupported_claim", severity: "blocking" });
+    }
+  });
+});

@@ -2,6 +2,7 @@
 // §5.6, §5.7, §7.3). Pure: the same text and inputs always give the same flags.
 
 import { LINKEDIN_MAX_CHARACTERS, findPlaceholders, type Span } from "./drafts";
+import { numbersIn } from "./research";
 
 export type FlagKind =
   | "unsupported_claim"
@@ -33,8 +34,12 @@ export type ClaimRecord = {
   span_start: number | null;
   span_end: number | null;
   approved_fact: string | null;
+  finding_id: string | null;
   support_status: "supported" | "unsupported" | "not_applicable";
 };
+
+/** A human-verified finding of an accepted source, as offered to the writer (by its position). */
+export type UsableFinding = { id: string; claim: string };
 
 /** Stock phrases of generic AI thought leadership (PRODUCT_SPEC §5.7). Per-founder phrases add to these. */
 export const GLOBAL_BANNED_PHRASES = [
@@ -148,17 +153,24 @@ export function placeholderFlags(body: string): FlagInput[] {
   );
 }
 
-export type ModelClaim = { text: string; kind: ClaimKind; approved_fact_index: number | null };
+export type ModelClaim = {
+  text: string;
+  kind: ClaimKind;
+  approved_fact_index: number | null;
+  finding_index?: number | null;
+};
 
 /**
  * Claim records and the flags they raise. Every factual claim not backed by
- * an approved fact is unsupported and blocks approval (Phase 4 criterion 5).
- * First-person experience must come from the founder.
+ * an approved fact or a verified research finding is unsupported and blocks
+ * approval (Phase 4 criterion 5, Phase 5 criterion 3). First-person
+ * experience must come from the founder.
  */
 export function reviewClaims(
   body: string,
   claims: ModelClaim[],
   approvedFacts: string[],
+  findings: UsableFinding[] = [],
 ): { records: ClaimRecord[]; flags: FlagInput[] } {
   const placeholders = findPlaceholders(body);
   const records: ClaimRecord[] = [];
@@ -170,11 +182,17 @@ export function reviewClaims(
       claim_kind: claim.kind,
       span_start: at?.start ?? null,
       span_end: at?.end ?? null,
+      finding_id: null,
     };
     if (claim.kind === "sourced_fact") {
       const fact = claim.approved_fact_index !== null ? approvedFacts[claim.approved_fact_index] : undefined;
+      const finding = claim.finding_index != null ? findings[claim.finding_index] : undefined;
+      // A cited finding must state the same numbers as the claim.
+      const sameNumbers = finding !== undefined && numbersMatch(claim.text, finding.claim);
       if (fact) {
         records.push({ ...base, approved_fact: fact, support_status: "supported" });
+      } else if (finding && sameNumbers) {
+        records.push({ ...base, approved_fact: null, finding_id: finding.id, support_status: "supported" });
       } else {
         records.push({ ...base, approved_fact: null, support_status: "unsupported" });
         flags.push(
@@ -182,7 +200,9 @@ export function reviewClaims(
             "unsupported_claim",
             "blocking",
             "claims",
-            `"${claim.text}" is stated as fact but isn't backed by an approved fact. Add a source, rephrase it as opinion, or remove it.`,
+            finding
+              ? `"${claim.text}" cites a research finding but its numbers differ from it. Use the finding's figures, or remove the claim.`
+              : `"${claim.text}" is stated as fact but isn't backed by an approved fact or a verified research finding. Add a source, rephrase it as opinion, or remove it.`,
             at,
           ),
         );
@@ -238,8 +258,9 @@ export function reviewDraft(input: {
   approvedFacts: string[];
   avoidPhrases: string[];
   styleRules: string[];
+  findings?: UsableFinding[];
 }): { records: ClaimRecord[]; flags: FlagInput[] } {
-  const claims = reviewClaims(input.body, input.claims, input.approvedFacts);
+  const claims = reviewClaims(input.body, input.claims, input.approvedFacts, input.findings);
   return {
     records: claims.records,
     flags: [
@@ -249,6 +270,12 @@ export function reviewDraft(input: {
       ...lintDraft(input.body, input),
     ],
   };
+}
+
+/** Every number the claim states must be one the finding states. */
+function numbersMatch(claim: string, finding: string): boolean {
+  const ours = numbersIn(finding);
+  return numbersIn(claim).every((n) => ours.includes(n));
 }
 
 /** Claims of an earlier version that still appear word for word in the edited text. */

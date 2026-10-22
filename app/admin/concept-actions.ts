@@ -12,7 +12,7 @@ import {
   CONCEPTS_VERSION,
   MAX_CONCEPTS_PER_RUN,
   buildConceptPrompt,
-} from "@/lib/prompts/concepts.v1";
+} from "@/lib/prompts/concepts.v2";
 import { llmModels } from "@/lib/providers/llm";
 import { promptText } from "@/lib/providers/llm/types";
 import {
@@ -62,7 +62,7 @@ async function requestRun(options: {
       options.count,
       options.replacing,
     );
-    promptLength = promptText({ ...buildConceptPrompt(input), untrustedContext: [] }).length;
+    promptLength = promptText(buildConceptPrompt(input)).length;
   } catch (error) {
     if (error instanceof MissingInputError) return { error: error.message };
     throw error;

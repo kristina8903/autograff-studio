@@ -6,11 +6,17 @@ import { lines, readSnapshot } from "@/lib/domain/briefs";
 import { carryClaims, reviewDraft, type ModelClaim } from "@/lib/domain/draft-review";
 import { estimateMaxCost } from "@/lib/domain/pricing";
 import { readVoiceVersion } from "@/lib/domain/voice";
-import { DRAFT_MAX_OUTPUT_TOKENS, DRAFT_TEMPLATE, DRAFT_VERSION, buildDraftPrompt } from "@/lib/prompts/draft.v1";
+import { DRAFT_MAX_OUTPUT_TOKENS, DRAFT_TEMPLATE, DRAFT_VERSION, buildDraftPrompt } from "@/lib/prompts/draft.v2";
 import { REPETITION_JUDGE_MAX_OUTPUT_TOKENS } from "@/lib/prompts/repetition-judge.v1";
 import { llmModels } from "@/lib/providers/llm";
 import { promptText } from "@/lib/providers/llm/types";
-import { MissingInputError, buildDraftInput, resolveDraftRefs } from "@/lib/server/generation/context";
+import {
+  MissingInputError,
+  buildDraftInput,
+  loadFindings,
+  resolveDraftRefs,
+  usableFindingIds,
+} from "@/lib/server/generation/context";
 import { startRun } from "@/lib/server/generation/request";
 import type { Json } from "@/lib/supabase/database.types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -54,7 +60,7 @@ async function requestDraftRun(
       { conceptId, draftId, guidance },
       models.extract,
     );
-    const length = promptText({ ...buildDraftPrompt(input.prompt), untrustedContext: [] }).length;
+    const length = promptText(buildDraftPrompt(input.prompt)).length;
     estimate =
       estimateMaxCost(models.draft, length, DRAFT_MAX_OUTPUT_TOKENS) +
       estimateMaxCost(models.extract, JUDGE_PROMPT_CHARACTERS, REPETITION_JUDGE_MAX_OUTPUT_TOKENS);
@@ -123,7 +129,7 @@ export async function saveDraftVersionAction(_state: ActionState, form: FormData
   const { data: draft } = await supabase
     .from("drafts")
     .select(
-      "founder_id, brief:brief_versions(content, founder_emphasis, approved_facts), current:draft_versions!drafts_current_version_fk(id, draft_claims(claim_text, claim_kind, approved_fact))",
+      "company_id, founder_id, concept_id, target_month, brief:brief_versions(content, founder_emphasis, approved_facts), current:draft_versions!drafts_current_version_fk(id, draft_claims(claim_text, claim_kind, approved_fact, finding_id))",
     )
     .eq("id", draftId)
     .maybeSingle();
@@ -136,9 +142,23 @@ export async function saveDraftVersionAction(_state: ActionState, form: FormData
 
   const approvedFacts = readSnapshot(draft.brief).approvedFacts;
   const voice = profile?.current ? readVoiceVersion(profile.current) : null;
+  // The findings the claims cite, if still verified, plus any usable this month.
+  const cited = draft.current.draft_claims.flatMap((c) => (c.finding_id ? [c.finding_id] : []));
+  const findings = await loadFindings(supabase, draft.company_id, [
+    ...new Set([
+      ...cited,
+      ...(await usableFindingIds(supabase, draft.company_id, draft.target_month, draft.concept_id)),
+    ]),
+  ]);
   const previous: ModelClaim[] = draft.current.draft_claims.map((c) => {
     const index = c.approved_fact ? approvedFacts.indexOf(c.approved_fact) : -1;
-    return { text: c.claim_text, kind: c.claim_kind, approved_fact_index: index >= 0 ? index : null };
+    const finding = c.finding_id ? findings.findIndex((f) => f.id === c.finding_id) : -1;
+    return {
+      text: c.claim_text,
+      kind: c.claim_kind,
+      approved_fact_index: index >= 0 ? index : null,
+      finding_index: finding >= 0 ? finding : null,
+    };
   });
   const review = reviewDraft({
     body,
@@ -148,6 +168,7 @@ export async function saveDraftVersionAction(_state: ActionState, form: FormData
     approvedFacts,
     avoidPhrases: voice?.avoidPhrases ?? [],
     styleRules: voice?.styleRules ?? [],
+    findings: findings.map(({ id, claim }) => ({ id, claim })),
   });
 
   const { data: versionNo, error } = await supabase.rpc("save_draft_version", {

@@ -11,7 +11,8 @@ const SECRET_CLIENT = {
 // Vendor SDKs only behind their provider interface (docs/ARCHITECTURE.md §4.4).
 const VENDOR_SDK = {
   group: ["@anthropic-ai/sdk", "@anthropic-ai/sdk/*"],
-  message: "Only lib/providers/llm/anthropic.ts may import the Anthropic SDK; use lib/providers/llm.",
+  message:
+    "Only lib/providers/llm/anthropic.ts and lib/providers/research/anthropic.ts may import the Anthropic SDK; use lib/providers/llm or lib/providers/research.",
 };
 const restrict = (...patterns) => ["error", { patterns }];
 
@@ -20,7 +21,10 @@ const eslintConfig = defineConfig([
   ...nextTs,
   { rules: { "no-restricted-imports": restrict(SECRET_CLIENT, VENDOR_SDK) } },
   { files: ["lib/server/admin/**"], rules: { "no-restricted-imports": restrict(VENDOR_SDK) } },
-  { files: ["lib/providers/llm/anthropic.ts"], rules: { "no-restricted-imports": restrict(SECRET_CLIENT) } },
+  {
+    files: ["lib/providers/llm/anthropic.ts", "lib/providers/research/anthropic.ts"],
+    rules: { "no-restricted-imports": restrict(SECRET_CLIENT) },
+  },
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "playwright-report/**", "test-results/**"]),
 ]);
 

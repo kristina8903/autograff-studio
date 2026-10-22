@@ -212,3 +212,20 @@ update public.settings set ai_monthly_budget_usd = 50;
 ```
 
 The database refuses any value above 50.
+
+## 9. Turn on web research (Phase 5)
+
+Research uses the Claude web search tool with the same Anthropic key (D-06,
+D-33). Each search costs $0.01, plus tokens; a research run makes at most 5
+searches and costs about $0.10 to $0.40. That spend counts against the same
+ceilings.
+
+1. In Vercel, for **Production** only, add `RESEARCH_PROVIDER` = `anthropic`.
+   Step 8's key must be set.
+2. Check that web search is enabled for the organization in the Anthropic
+   Console (Settings → Capabilities). If an administrator turned it off,
+   research runs fail with a clear error.
+3. **Redeploy.**
+4. In **Research**, set any domains to block (content farms, competitors'
+   marketing pages), then ask one question. Each source shows its dates and
+   excerpt; accept it and verify its findings before drafts can use them.

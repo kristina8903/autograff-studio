@@ -151,7 +151,13 @@ All retrieved web pages and Slack messages are **untrusted data**.
    - Quotes must appear verbatim in the stored excerpt.
    - URLs in findings must equal the URL the provider actually returned.
      **The model cannot introduce a new URL.**
-   - Numbers in a claim must appear in the excerpt, or the claim is flagged.
+   - Numbers in a claim must appear in the excerpt, or the finding is
+     rejected (Phase 5: a finding containing any web address is rejected too).
+   - **The search step** (Phase 5) reads pages through the Claude web search
+     tool. It has that tool only, called directly (no code execution), and a
+     cap of 5 searches. Its own prose is thrown away: only the pages the tool
+     returned and the passages the API cited from them are kept, and a
+     citation of a URL the search did not return is dropped.
 4. **No autonomous actions.** No model output can trigger publishing, sending,
    integration changes, or new outbound requests to URLs it chose. Server-side
    web fetch, if used, is limited to URLs returned by the search provider.

@@ -302,6 +302,11 @@ about 10 staging drafts per founder, recorded in the phase report.
 
 ## Phase 5: Industry research
 
+**Status:** built and tested locally, 2026-10-22; see the
+[Phase 5 report](phase-reports/phase-5.md). The definition of done (research
+cost visible in the cost ledger) is met locally with the fake provider; the
+real search runs on staging once `RESEARCH_PROVIDER=anthropic` is set.
+
 **Goal.** Collect current, credible evidence with provenance and link it to
 the claims in drafts.
 

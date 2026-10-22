@@ -62,7 +62,7 @@ Pricing source to re-check: https://platform.claude.com/docs/en/about-claude/pri
 
 | Provider | Headline price | Dates in results | Notes |
 |---|---|---|---|
-| Claude web search tool (`web_search_20260209`) | $10 per 1,000 searches plus tokens for the results; failed searches not billed | `page_age` per result | Results come back inside the model call, with citations (URL, title, cited text). Tool type and domain filters **[V]**; price and fields **[S]**. Source: https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool |
+| Claude web search tool (`web_search_20260209`) | $10 per 1,000 searches plus tokens for the results; failed searches not billed **[V 2026-10-22]** | `page_age` per result: when the page was **last updated**, not its publication date **[V]** | Results come back inside the model call. Page content is encrypted; only citations (URL, title, up to 150 characters of cited text) are readable, and citations are always on **[V]**. `allowed_domains` or `blocked_domains`, not both **[V]**. Source: https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool |
 | Brave Search API | $5 per 1,000 requests, $5 of free credit per month | `page_age`, `age` | Plain search API. We control fetching and excerpting. https://api-dashboard.search.brave.com/documentation/pricing |
 | Exa | $4–7 per 1,000 searches; contents $1 per 1,000 pages | Supports published-date filters; response field not confirmed | Good at semantic, recent-content search. https://exa.ai/docs/reference/pricing |
 | Tavily | About $0.008 per credit (basic search = 1 credit, advanced = 2); 1,000 free credits per month | Not confirmed | Built for LLM use. https://docs.tavily.com/documentation/api-credits |
@@ -333,7 +333,7 @@ person who checked it recorded in DECISIONS.md.
 | 7 | Supabase production price (new org vs project in an existing paid org); backups per plan; Free pausing | Phase 1 | https://supabase.com/docs/guides/platform/backups |
 | 8 | Supabase custom SMTP and auth email rate limits | Phase 1 | https://supabase.com/docs/guides/auth/auth-smtp |
 | 9 | Supabase Vault usage from SQL functions | Phase 6 | https://supabase.com/docs/guides/database/vault |
-| 10 | Anthropic model prices and web search price | Phase 4 / 5 | https://platform.claude.com/docs/en/about-claude/pricing |
-| 11 | Research provider fields (published date) and price, for whichever is chosen | Phase 5 | §3.2 links |
+| 10 | Anthropic model prices and web search price. **Verified 2026-10-22** (D-33) | Phase 4 / 5 | https://platform.claude.com/docs/en/about-claude/pricing |
+| 11 | Research provider fields (published date) and price, for whichever is chosen. **Verified 2026-10-22 for the Claude web search tool** (D-33) | Phase 5 | §3.2 links |
 | 12 | Slack scopes; bot access to `conversations.replies`; internal-app rate limits; API Terms on LLM processing | Phase 6 | §4 links |
 | 13 | LinkedIn API Terms and AI policy on API publishing; token refresh; Community Management eligibility | Phase 10 | §5 links |

@@ -133,6 +133,32 @@
 >   comments (CHECK).
 > - All three tables are admin-only to read. Founders use the functions,
 >   which never return the rationale, internal comments or unshared flags.
+>
+> **Implemented in Phase 5 (migration `20261023000001_research.sql`):**
+> `research_queries`, `research_sources`, `research_findings`, domain lists on
+> `settings`, `generation_runs.web_searches`, the `draft_claims.finding_id`
+> foreign key, and these functions:
+>
+> - runner: `complete_research_run`;
+> - admin: `review_research_source`, `review_research_finding`,
+>   `link_research_findings` and `set_research_domains`;
+> - founder: `founder_draft_sources`;
+> - replaced: `insert_draft_version` and `founder_save_version`, which now
+>   keep `finding_id`.
+>
+> Differences from the proposal below (D-33):
+>
+> - `research_queries` adds `target_month` and the run's counts (sources
+>   found, already stored, findings rejected). It drops `brief_version_id`:
+>   a query is for a month and optionally a concept.
+> - `research_sources` adds `page_age_raw` (the provider's date text), a
+>   reviewer note and reviewer. `publisher` is the site's host unless the
+>   admin knows better. `author` is not stored.
+> - `research_findings` adds `research_query_id` and `event_date_precision`.
+>   `machine_supported` means the quote and numbers are in the excerpt. A
+>   CHECK ensures `human_verified` always names who verified it.
+> - All three are admin-only. Founders see only the sources behind their own
+>   shared drafts' claims.
 
 Status: **Phase 0 proposal**, 2026-10-21. Postgres (Supabase). Nothing here is
 migrated yet. Table and column names are proposals that will be finalized in

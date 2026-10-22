@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readSnapshot } from "@/lib/domain/briefs";
 import type { FailureKind } from "@/lib/domain/retry";
-import type { ConceptPromptInput, GeneratedConcept } from "@/lib/prompts/concepts.v1";
+import type { ConceptPromptInput, GeneratedConcept } from "@/lib/prompts/concepts.v2";
 import { FakeLlmProvider } from "@/lib/providers/llm/fake";
 import { LlmError, type Usage } from "@/lib/providers/llm/types";
 import type { RepetitionCandidate } from "@/lib/prompts/repetition-judge.v1";
@@ -13,6 +13,8 @@ import {
   type DraftPayload,
   type DraftRunInput,
   type FeedbackRunInput,
+  type ResearchPayload,
+  type ResearchRunInput,
   type RunStore,
 } from "@/lib/server/generation/runner";
 
@@ -25,6 +27,7 @@ const INPUT: ConceptPromptInput = {
     versionNo: 1,
   },
   voiceContext: "voice",
+  findings: [],
   existing: [],
   otherFounders: [],
   count: 3,
@@ -47,9 +50,10 @@ const DRAFT_INPUT: DraftRunInput = {
       needsPersonalStory: true,
     },
     voiceContext: "voice",
+    findings: [],
     revising: null,
   },
-  review: { approvedFacts: [], avoidPhrases: [], styleRules: [] },
+  review: { approvedFacts: [], avoidPhrases: [], styleRules: [], findings: [] },
   judgeModel: "claude-sonnet-5-5",
 };
 
@@ -57,6 +61,15 @@ const DRAFT_INPUT: DraftRunInput = {
 class MemoryStore implements RunStore {
   drafts: { payload: DraftPayload; cost: number }[] = [];
   feedback: FeedbackRunInput = { before: "Before text.", after: "After text.", format: "story" };
+  research: ResearchRunInput = { query: "repair approval delays", allowedDomains: [], blockedDomains: [] };
+  stored: { payload: ResearchPayload; searches: number; cost: number } | null = null;
+  async researchInput() {
+    return this.research;
+  }
+  async completeResearch(runId: string, _model: string, usage: Usage, searches: number, payload: ResearchPayload) {
+    this.runs.get(runId)!.status = "succeeded";
+    this.stored = { payload, searches, cost: usage.costUsd };
+  }
   signals: FeedbackSignal[] = [];
   async feedbackInput() {
     return this.feedback;
@@ -190,9 +203,9 @@ describe("processRun", () => {
   });
 
   it("fails a run kind it cannot process, with a readable reason", async () => {
-    const store = new MemoryStore(["research"]);
+    const store = new MemoryStore(["insight_extraction"]);
     expect(await processRun(store, new FakeLlmProvider())).toMatchObject({ status: "failed", error: "unknown" });
-    expect(store.runs.get("r0")!.error).toBe("unknown: No runner for research yet.");
+    expect(store.runs.get("r0")!.error).toBe("unknown: No runner for insight_extraction yet.");
   });
 });
 
@@ -203,12 +216,11 @@ it("processDueRuns works through the queue", async () => {
 });
 
 async function sampleRequest() {
-  const { buildConceptPrompt, conceptBatchSchema } = await import("@/lib/prompts/concepts.v1");
+  const { buildConceptPrompt, conceptBatchSchema } = await import("@/lib/prompts/concepts.v2");
   return {
     task: "concepts" as const,
     model: "claude-opus-5-5",
     ...buildConceptPrompt(INPUT),
-    untrustedContext: [],
     schema: conceptBatchSchema,
     maxOutputTokens: 100,
     effort: "medium" as const,
@@ -281,12 +293,11 @@ describe("draft runs", () => {
 });
 
 async function draftRequest() {
-  const { buildDraftPrompt, draftSchema } = await import("@/lib/prompts/draft.v1");
+  const { buildDraftPrompt, draftSchema } = await import("@/lib/prompts/draft.v2");
   return {
     task: "draft" as const,
     model: "claude-opus-5-5",
     ...buildDraftPrompt(DRAFT_INPUT.prompt),
-    untrustedContext: [],
     schema: draftSchema,
     maxOutputTokens: 100,
     effort: "medium" as const,

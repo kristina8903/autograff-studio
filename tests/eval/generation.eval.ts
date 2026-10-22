@@ -3,8 +3,8 @@
 import { describe, expect, it } from "vitest";
 import { metadataLeak, reviewDraft } from "@/lib/domain/draft-review";
 import { findPlaceholders } from "@/lib/domain/drafts";
-import { buildConceptPrompt, conceptBatchSchema, CONCEPTS_MAX_OUTPUT_TOKENS } from "@/lib/prompts/concepts.v1";
-import { buildDraftPrompt, draftRecordSchema, draftSchema, DRAFT_MAX_OUTPUT_TOKENS } from "@/lib/prompts/draft.v1";
+import { buildConceptPrompt, conceptBatchSchema, CONCEPTS_MAX_OUTPUT_TOKENS } from "@/lib/prompts/concepts.v2";
+import { buildDraftPrompt, draftRecordSchema, draftSchema, DRAFT_MAX_OUTPUT_TOKENS } from "@/lib/prompts/draft.v2";
 import { buildVoiceContext } from "@/lib/prompts/voice-context.v1";
 import { BRIEF, VOICE_SET } from "./fixtures";
 import { CappedProvider, EVAL_CAP_USD, evalEnabled } from "./budget";
@@ -24,6 +24,7 @@ describe.skipIf(!evalEnabled())(`generation eval (real AI calls, cap $${EVAL_CAP
         monthLabel: "November 2026",
         brief: BRIEF,
         voiceContext,
+        findings: [],
         existing: [],
         otherFounders: [],
         count: 3,
@@ -56,6 +57,7 @@ describe.skipIf(!evalEnabled())(`generation eval (real AI calls, cap $${EVAL_CAP
           needsPersonalStory: concept.needs_personal_story,
         },
         voiceContext,
+        findings: [],
         revising: null,
       }),
       untrustedContext: [],

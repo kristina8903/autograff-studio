@@ -8,6 +8,7 @@ import { requireAdmin } from "@/lib/auth/dal";
 import { monthLabel } from "@/lib/domain/dates";
 import { DRAFT_STATUS_LABELS, isEditable, nextStates } from "@/lib/domain/draft-states";
 import { usd } from "@/lib/domain/pricing";
+import { dateLabel } from "@/lib/domain/research";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   AdminCommentForm,
@@ -61,7 +62,7 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
     supabase
       .from("draft_versions")
       .select(
-        "*, author:profiles(email), run:generation_runs(model, served_model, actual_cost_usd), draft_claims(*), review_flags(*)",
+        "*, author:profiles(email), run:generation_runs(model, served_model, actual_cost_usd), draft_claims(*, finding:research_findings(claim_text, verification_status, source:research_sources(title, url, publisher, status, published_at, published_at_precision))), review_flags(*)",
       )
       .eq("draft_id", id)
       .order("version_no", { ascending: false }),
@@ -246,7 +247,33 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
                     <td className="px-4 py-2 text-xs text-muted">{KIND_LABEL[c.claim_kind]}</td>
                     <td className="px-4 py-2">
                       <Badge tone={SUPPORT_TONE[c.support_status]}>{c.support_status.replace("_", " ")}</Badge>
-                      {c.approved_fact ? <span className="block text-xs text-muted">{c.approved_fact}</span> : null}
+                      {c.approved_fact ? (
+                        <span className="block text-xs text-muted">Brief: {c.approved_fact}</span>
+                      ) : null}
+                      {c.finding?.source ? (
+                        <span className="block text-xs text-muted">
+                          <a
+                            href={c.finding.source.url}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="text-accent hover:underline"
+                          >
+                            {c.finding.source.title || c.finding.source.publisher}
+                          </a>{" "}
+                          · {c.finding.source.publisher} ·{" "}
+                          {dateLabel(c.finding.source.published_at, c.finding.source.published_at_precision)}
+                          {c.finding.verification_status !== "human_verified" ||
+                          c.finding.source.status !== "accepted" ? (
+                            <span className="block text-danger">
+                              The finding is now {c.finding.verification_status.replace("_", " ")}
+                              {c.finding.source.status !== "accepted"
+                                ? ` and its source ${c.finding.source.status}`
+                                : ""}
+                              .
+                            </span>
+                          ) : null}
+                        </span>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
