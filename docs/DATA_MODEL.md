@@ -69,6 +69,25 @@
 > - Founders read their own profile, versions and examples, and can add
 >   their own `approved_example` through `add_writing_examples` (D-26).
 >   Nothing else is writable by a founder.
+>
+> **Implemented in Phase 4a (migration `20261021000004_generation_concepts.sql`):**
+> `generation_runs`, `concepts`, two ceiling columns on `settings`, and
+> the functions `request_generation`, `ai_spend_summary`, `update_concept` and
+> `set_concept_status` (admin), plus `claim_generation_run`,
+> `requeue_stale_runs`, `fail_generation_run` and `complete_concept_run`
+> (job runner, `service_role` only). Differences from the proposal below:
+>
+> - `generation_runs` adds `target_month`, `params`, `run_after` (retry
+>   time), `served_model` (the model that answered, which differs after a
+>   refusal fallback), `cache_write_tokens`, and both `estimated_cost_usd`
+>   (checked before the run) and `actual_cost_usd`. Status adds `refused`
+>   (over a ceiling; never ran).
+> - The cost ledger is the function `ai_spend_summary` over
+>   `generation_runs`, not a table (D-28).
+> - `concepts` adds `voice_profile_version_id`, `needs_personal_story`,
+>   `superseded_by` (set when regenerated; the old row is archived) and
+>   `edited_by`/`edited_at`. `concept_evidence` waits for Phase 5 (D-29).
+> - Runs, costs and concepts are admin-only; founders see none of them.
 
 Status: **Phase 0 proposal**, 2026-10-21. Postgres (Supabase). Nothing here is
 migrated yet. Table and column names are proposals that will be finalized in

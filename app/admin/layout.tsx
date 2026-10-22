@@ -11,8 +11,10 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
         { href: "/admin", label: "Founders & team" },
         { href: "/admin/briefs", label: "Briefs" },
         { href: "/admin/calendar", label: "Calendar" },
+        { href: "/admin/concepts", label: "Concepts" },
         { href: "/admin/voice", label: "Voice" },
         { href: "/admin/feedback", label: "Feedback" },
+        { href: "/admin/ai", label: "AI usage" },
       ]}
       email={admin.email}
     >

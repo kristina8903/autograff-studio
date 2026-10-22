@@ -316,6 +316,132 @@ export type Database = {
         };
         Relationships: [];
       };
+      concepts: {
+        Row: {
+          audience: string;
+          brief_version_id: string;
+          company_id: string;
+          core_argument: string;
+          created_at: string;
+          edited_at: string | null;
+          edited_by: string | null;
+          evidence_requirements: string[];
+          fingerprint: NonNullable<Json>;
+          format: Database["public"]["Enums"]["post_format"];
+          founder_id: string;
+          generation_run_id: string | null;
+          hook: string;
+          id: string;
+          needs_personal_story: boolean;
+          status: Database["public"]["Enums"]["concept_status"];
+          superseded_by: string | null;
+          target_month: string;
+          title: string;
+          updated_at: string;
+          voice_profile_version_id: string | null;
+          why_this_founder: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          audience?: string;
+          brief_version_id: string;
+          company_id: string;
+          core_argument: string;
+          created_at?: string;
+          edited_at?: string | null;
+          edited_by?: string | null;
+          evidence_requirements?: string[];
+          fingerprint?: NonNullable<Json>;
+          format: Database["public"]["Enums"]["post_format"];
+          founder_id: string;
+          generation_run_id?: string | null;
+          hook?: string;
+          id?: string;
+          needs_personal_story?: boolean;
+          status?: Database["public"]["Enums"]["concept_status"];
+          superseded_by?: string | null;
+          target_month: string;
+          title: string;
+          updated_at?: string;
+          voice_profile_version_id?: string | null;
+          why_this_founder?: string;
+        };
+        Update: {
+          audience?: string;
+          brief_version_id?: string;
+          company_id?: string;
+          core_argument?: string;
+          created_at?: string;
+          edited_at?: string | null;
+          edited_by?: string | null;
+          evidence_requirements?: string[];
+          fingerprint?: NonNullable<Json>;
+          format?: Database["public"]["Enums"]["post_format"];
+          founder_id?: string;
+          generation_run_id?: string | null;
+          hook?: string;
+          id?: string;
+          needs_personal_story?: boolean;
+          status?: Database["public"]["Enums"]["concept_status"];
+          superseded_by?: string | null;
+          target_month?: string;
+          title?: string;
+          updated_at?: string;
+          voice_profile_version_id?: string | null;
+          why_this_founder?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "concepts_brief_version_id_fkey";
+            columns: ["brief_version_id"];
+            isOneToOne: false;
+            referencedRelation: "brief_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "concepts_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "concepts_edited_by_fkey";
+            columns: ["edited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "concepts_founder_id_fkey";
+            columns: ["founder_id"];
+            isOneToOne: false;
+            referencedRelation: "founders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "concepts_generation_run_id_fkey";
+            columns: ["generation_run_id"];
+            isOneToOne: false;
+            referencedRelation: "generation_runs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "concepts_superseded_by_fkey";
+            columns: ["superseded_by"];
+            isOneToOne: false;
+            referencedRelation: "concepts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "concepts_voice_profile_version_id_fkey";
+            columns: ["voice_profile_version_id"];
+            isOneToOne: false;
+            referencedRelation: "voice_profile_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       feedback_signals: {
         Row: {
           applied_voice_profile_version_id: string | null;
@@ -541,6 +667,122 @@ export type Database = {
           },
         ];
       };
+      generation_runs: {
+        Row: {
+          actual_cost_usd: number | null;
+          attempt: number;
+          cache_read_tokens: number;
+          cache_write_tokens: number;
+          company_id: string;
+          created_at: string;
+          error_code: string | null;
+          error_message: string | null;
+          estimated_cost_usd: number;
+          finished_at: string | null;
+          founder_id: string | null;
+          id: string;
+          idempotency_key: string;
+          input_refs: NonNullable<Json>;
+          input_tokens: number;
+          kind: Database["public"]["Enums"]["generation_kind"];
+          model: string;
+          output_tokens: number;
+          params: NonNullable<Json>;
+          prompt_template: string;
+          prompt_template_version: number;
+          provider: string;
+          requested_by: string | null;
+          run_after: string;
+          served_model: string | null;
+          started_at: string | null;
+          status: Database["public"]["Enums"]["generation_status"];
+          target_month: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          actual_cost_usd?: number | null;
+          attempt?: number;
+          cache_read_tokens?: number;
+          cache_write_tokens?: number;
+          company_id: string;
+          created_at?: string;
+          error_code?: string | null;
+          error_message?: string | null;
+          estimated_cost_usd: number;
+          finished_at?: string | null;
+          founder_id?: string | null;
+          id?: string;
+          idempotency_key: string;
+          input_refs?: NonNullable<Json>;
+          input_tokens?: number;
+          kind: Database["public"]["Enums"]["generation_kind"];
+          model: string;
+          output_tokens?: number;
+          params?: NonNullable<Json>;
+          prompt_template: string;
+          prompt_template_version: number;
+          provider: string;
+          requested_by?: string | null;
+          run_after?: string;
+          served_model?: string | null;
+          started_at?: string | null;
+          status?: Database["public"]["Enums"]["generation_status"];
+          target_month?: string | null;
+        };
+        Update: {
+          actual_cost_usd?: number | null;
+          attempt?: number;
+          cache_read_tokens?: number;
+          cache_write_tokens?: number;
+          company_id?: string;
+          created_at?: string;
+          error_code?: string | null;
+          error_message?: string | null;
+          estimated_cost_usd?: number;
+          finished_at?: string | null;
+          founder_id?: string | null;
+          id?: string;
+          idempotency_key?: string;
+          input_refs?: NonNullable<Json>;
+          input_tokens?: number;
+          kind?: Database["public"]["Enums"]["generation_kind"];
+          model?: string;
+          output_tokens?: number;
+          params?: NonNullable<Json>;
+          prompt_template?: string;
+          prompt_template_version?: number;
+          provider?: string;
+          requested_by?: string | null;
+          run_after?: string;
+          served_model?: string | null;
+          started_at?: string | null;
+          status?: Database["public"]["Enums"]["generation_status"];
+          target_month?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "generation_runs_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "generation_runs_founder_id_fkey";
+            columns: ["founder_id"];
+            isOneToOne: false;
+            referencedRelation: "founders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "generation_runs_requested_by_fkey";
+            columns: ["requested_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       monthly_briefs: {
         Row: {
           company_id: string;
@@ -657,6 +899,8 @@ export type Database = {
       };
       settings: {
         Row: {
+          ai_monthly_budget_usd: number;
+          ai_per_run_ceiling_usd: number;
           allowed_email_domains: string[];
           company_id: string;
           updated_at: string;
@@ -664,12 +908,16 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          ai_monthly_budget_usd?: number;
+          ai_per_run_ceiling_usd?: number;
           allowed_email_domains?: string[];
           company_id: string;
           updated_at?: string;
           updated_by?: string | null;
         };
         Update: {
+          ai_monthly_budget_usd?: number;
+          ai_per_run_ceiling_usd?: number;
           allowed_email_domains?: string[];
           company_id?: string;
           updated_at?: string;
@@ -933,6 +1181,57 @@ export type Database = {
         Args: { p_role: Database["public"]["Enums"]["user_role"]; p_user_id: string };
         Returns: undefined;
       };
+      ai_spend_summary: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          monthly_budget_usd: number;
+          per_run_ceiling_usd: number;
+          spent_usd: number;
+        }[];
+      };
+      claim_generation_run: {
+        Args: { p_run_id?: string };
+        Returns: {
+          actual_cost_usd: number | null;
+          attempt: number;
+          cache_read_tokens: number;
+          cache_write_tokens: number;
+          company_id: string;
+          created_at: string;
+          error_code: string | null;
+          error_message: string | null;
+          estimated_cost_usd: number;
+          finished_at: string | null;
+          founder_id: string | null;
+          id: string;
+          idempotency_key: string;
+          input_refs: NonNullable<Json>;
+          input_tokens: number;
+          kind: Database["public"]["Enums"]["generation_kind"];
+          model: string;
+          output_tokens: number;
+          params: NonNullable<Json>;
+          prompt_template: string;
+          prompt_template_version: number;
+          provider: string;
+          requested_by: string | null;
+          run_after: string;
+          served_model: string | null;
+          started_at: string | null;
+          status: Database["public"]["Enums"]["generation_status"];
+          target_month: string | null;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "generation_runs";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      complete_concept_run: {
+        Args: { p_concepts: Json; p_run_id: string; p_served_model: string; p_usage: Json };
+        Returns: number;
+      };
       coverage_slot_counts: {
         Args: { p_founder_id: string; p_month: string };
         Returns: {
@@ -944,6 +1243,16 @@ export type Database = {
         }[];
       };
       delete_writing_example: { Args: { p_example_id: string }; Returns: undefined };
+      fail_generation_run: {
+        Args: {
+          p_error_code: string;
+          p_error_message: string;
+          p_retry_after_seconds: number;
+          p_run_id: string;
+          p_usage: Json;
+        };
+        Returns: Database["public"]["Enums"]["generation_status"];
+      };
       founder_brief: {
         Args: { p_month: string };
         Returns: {
@@ -963,6 +1272,27 @@ export type Database = {
         Returns: undefined;
       };
       record_sign_in: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Enums"]["user_status"] };
+      request_generation: {
+        Args: {
+          p_estimated_cost_usd: number;
+          p_founder_id: string;
+          p_idempotency_key: string;
+          p_input_refs: Json;
+          p_kind: Database["public"]["Enums"]["generation_kind"];
+          p_model: string;
+          p_params: Json;
+          p_prompt_template: string;
+          p_prompt_template_version: number;
+          p_provider: string;
+          p_target_month: string;
+        };
+        Returns: {
+          message: string;
+          run_id: string;
+          run_status: Database["public"]["Enums"]["generation_status"];
+        }[];
+      };
+      requeue_stale_runs: { Args: { p_older_than?: string }; Returns: number };
       review_feedback_signal: { Args: { p_decision: string; p_note: string; p_signal_id: string }; Returns: undefined };
       save_brief_version: {
         Args: {
@@ -1010,9 +1340,26 @@ export type Database = {
         };
         Returns: string;
       };
+      set_concept_status: {
+        Args: { p_concept_id: string; p_status: Database["public"]["Enums"]["concept_status"] };
+        Returns: undefined;
+      };
       sync_calendar_slots: {
         Args: { p_founder_id: string; p_month: string; p_slots: Json; p_today: string };
         Returns: Json;
+      };
+      update_concept: {
+        Args: {
+          p_audience: string;
+          p_concept_id: string;
+          p_core_argument: string;
+          p_evidence_requirements: string[];
+          p_format: Database["public"]["Enums"]["post_format"];
+          p_hook: string;
+          p_title: string;
+          p_why_this_founder: string;
+        };
+        Returns: undefined;
       };
       update_slot: {
         Args: { p_action: string; p_new_date: string; p_slot_id: string; p_today: string };
@@ -1032,9 +1379,23 @@ export type Database = {
     Enums: {
       actor_kind: "user" | "system" | "job";
       cadence_period: "week" | "month";
+      concept_status: "proposed" | "selected" | "drafted" | "rejected" | "archived";
       feedback_kind: "stable_preference" | "format_preference" | "one_off" | "editorial_correction";
       feedback_proposer: "system" | "admin";
       feedback_status: "proposed" | "accepted" | "rejected";
+      generation_kind:
+        | "concept_batch"
+        | "concept_regen"
+        | "draft"
+        | "draft_regen"
+        | "rewrite"
+        | "research"
+        | "finding_extraction"
+        | "insight_extraction"
+        | "fingerprint"
+        | "repetition_judge"
+        | "feedback_classification";
+      generation_status: "queued" | "running" | "succeeded" | "failed" | "refused" | "cancelled";
       post_format:
         "story" | "opinion" | "how_to" | "data_insight" | "lesson" | "announcement" | "list" | "question" | "other";
       slot_kind: "regular" | "reserved_timely" | "manual";
@@ -1155,9 +1516,24 @@ export const Constants = {
     Enums: {
       actor_kind: ["user", "system", "job"],
       cadence_period: ["week", "month"],
+      concept_status: ["proposed", "selected", "drafted", "rejected", "archived"],
       feedback_kind: ["stable_preference", "format_preference", "one_off", "editorial_correction"],
       feedback_proposer: ["system", "admin"],
       feedback_status: ["proposed", "accepted", "rejected"],
+      generation_kind: [
+        "concept_batch",
+        "concept_regen",
+        "draft",
+        "draft_regen",
+        "rewrite",
+        "research",
+        "finding_extraction",
+        "insight_extraction",
+        "fingerprint",
+        "repetition_judge",
+        "feedback_classification",
+      ],
+      generation_status: ["queued", "running", "succeeded", "failed", "refused", "cancelled"],
       post_format: [
         "story",
         "opinion",

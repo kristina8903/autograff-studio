@@ -181,3 +181,34 @@ one you invited.
   activity [S]. Resume it from the Supabase dashboard; nothing is lost.
 - **Not yet done:** the restore drill from the Phase 1 definition of done. It
   needs this project to exist.
+
+## 8. Turn on AI generation (Phase 4)
+
+Until this step, staging uses the fake AI: it makes no calls and costs
+nothing, and the AI usage page says so.
+
+1. **Create an API key.** In the Anthropic Console, create an API key for
+   staging. If the Console offers a monthly spend limit, set it to **$10**
+   (D-21). That gives a second limit on Anthropic's side, as well as the one
+   in the app.
+2. **Add it to Vercel.** Project → Settings → Environment Variables, for
+   **Production** (the staging site at autograff-studio.vercel.app) only:
+   - `LLM_PROVIDER` = `anthropic`
+   - `ANTHROPIC_API_KEY` = the key (starts with `sk-ant-`)
+   - `CRON_SECRET` = a random string of 32+ characters. Vercel sends it to
+     `/api/jobs/tick`, which picks up retries. Generate one with
+     `openssl rand -hex 32`, or with any password generator.
+
+   Never paste these into chat or into the repository.
+3. **Redeploy** (Deployments → ⋯ → Redeploy), so the new variables take effect.
+4. Open **AI usage**. The provider should read **Anthropic**.
+
+The spend ceilings ($10 a month, $2 a run) are kept in the database, not in
+Vercel, and the app can't raise them. For production at go-live, the owner
+runs this once in the production project's SQL editor:
+
+```sql
+update public.settings set ai_monthly_budget_usd = 50;
+```
+
+The database refuses any value above 50.

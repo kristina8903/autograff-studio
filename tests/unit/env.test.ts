@@ -48,3 +48,30 @@ describe("environment validation", () => {
     expect(message).not.toContain("autograff-studio.vercel.app");
   });
 });
+
+describe("AI settings", () => {
+  const secret = { SUPABASE_SECRET_KEY: "sb_secret_xxxxxxxxxxxxxxxxxxxxxx" };
+  it("defaults to the fake provider and the planned models", () => {
+    expect(parseServerEnv(secret)).toMatchObject({
+      LLM_PROVIDER: "fake",
+      LLM_MODEL_DRAFT: "claude-opus-5-5",
+      LLM_MODEL_EXTRACT: "claude-sonnet-5-5",
+    });
+  });
+  it("requires an Anthropic key when the anthropic provider is chosen, without echoing it", () => {
+    expect(() => parseServerEnv({ ...secret, LLM_PROVIDER: "anthropic" })).toThrow(/ANTHROPIC_API_KEY is not set/);
+    expect(() => parseServerEnv({ ...secret, LLM_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "oops-wrong" })).toThrow(
+      /must be an Anthropic API key/,
+    );
+    expect(() => parseServerEnv({ ...secret, LLM_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "oops-wrong" })).not.toThrow(
+      /oops-wrong/,
+    );
+    expect(
+      parseServerEnv({ ...secret, LLM_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "sk-ant-api-test" }).LLM_PROVIDER,
+    ).toBe("anthropic");
+  });
+  it("rejects a malformed model ID and a short cron secret", () => {
+    expect(() => parseServerEnv({ ...secret, LLM_MODEL_DRAFT: "gpt-4" })).toThrow(/LLM_MODEL_DRAFT/);
+    expect(() => parseServerEnv({ ...secret, CRON_SECRET: "short" })).toThrow(/CRON_SECRET/);
+  });
+});

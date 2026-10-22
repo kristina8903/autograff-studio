@@ -18,7 +18,7 @@ export function AppShell({
           <Link href="/" className="text-sm font-semibold tracking-tight">
             Content Studio
           </Link>
-          <nav className="flex gap-4 text-sm">
+          <nav className="flex min-w-0 gap-4 overflow-x-auto whitespace-nowrap text-sm">
             {nav.map((item) => (
               <Link key={item.href} href={item.href} className="text-muted hover:text-foreground">
                 {item.label}

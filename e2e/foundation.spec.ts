@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { SUPABASE_URL, accessTokenFrom, freshTotp, latestEmail, signInWithCode } from "./helpers";
 
@@ -9,6 +10,12 @@ const COO = "local-coo@autograff.ai";
 const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
 
 let adminTotpSecret = "";
+
+// Fresh seed: this file needs an admin who has not enrolled an authenticator,
+// whatever other spec files ran before it.
+test.beforeAll(() => {
+  execFileSync("npx", ["supabase", "db", "reset"], { stdio: "ignore" });
+});
 let adminPage: Page;
 let founderPage: Page;
 

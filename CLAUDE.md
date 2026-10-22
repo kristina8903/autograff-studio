@@ -33,8 +33,9 @@ the same change when behavior changes.
 - **Current status: Phase 1 (application foundation) is built and deployed
   to staging (`docs/phase-reports/phase-1.md`). Phase 2 (monthly strategy and
   cadence) and Phase 3 (founder voice and writing library) are built and
-  tested (2026-10-21; `docs/phase-reports/`). Phase 4 is not approved to
-  start.**
+  tested (2026-10-21; `docs/phase-reports/`). Phase 4 is approved and in
+  progress: 4a (AI runs, cost ceilings, concepts) is built; 4b (drafts) is
+  next.**
 - Phase order is agreed (D-19): 1, 2, 3, 4, 7, 5, 9, 8, go-live, 6, 10.
 - End each phase with a report:
   - what was built;

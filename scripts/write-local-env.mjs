@@ -15,6 +15,8 @@ const values = {
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: status.PUBLISHABLE_KEY,
   SUPABASE_SECRET_KEY: status.SECRET_KEY,
   SUPABASE_DB_URL: status.DB_URL,
+  // A fixed local value so tests can call /api/jobs/tick. Deployed environments set their own.
+  CRON_SECRET: "local-only-cron-secret-0000",
 };
 let body = existsSync(".env.example") ? readFileSync(".env.example", "utf8") : "";
 for (const [key, value] of Object.entries(values)) {
