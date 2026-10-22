@@ -1,17 +1,19 @@
 import "server-only";
 // The job runner's storage: the secret-key client, because runs execute
 // without a user session (after the response, or from the cron tick). Every
-// function here is reached either through runGenerationNow (which checks the
-// admin first) or through runDueGenerations (only from /api/jobs/tick, which
-// checks CRON_SECRET first).
+// function here is reached through runGenerationNow (which checks the admin
+// first), runFounderGenerationNow (the founder, and that the run is their own
+// rewrite) or runDueGenerations (only from /api/jobs/tick, which checks
+// CRON_SECRET first).
 
-import { requireAdmin } from "@/lib/auth/dal";
+import { requireAdmin, requireFounder } from "@/lib/auth/dal";
 import { isIsoDate } from "@/lib/domain/dates";
 import { llmProvider } from "@/lib/providers/llm";
 import {
   buildConceptInput,
   buildDraftInput,
   MissingInputError,
+  resolveDraftRefs,
   type ConceptRefs,
 } from "@/lib/server/generation/context";
 import type { RepetitionCandidate } from "@/lib/prompts/repetition-judge.v1";
@@ -95,10 +97,18 @@ function createRunStore(): RunStore {
       }
       if (!conceptId) throw new RunInputError("The draft has no concept to write from.");
       try {
+        let refs = row.input_refs as unknown as Partial<ConceptRefs>;
+        // A founder's rewrite is requested without them seeing the inputs; the
+        // runner picks them now and records them on the run.
+        if (!refs.brief_version_id) {
+          refs = await resolveDraftRefs(db, row.company_id, conceptId);
+          const { error } = await db.rpc("set_run_input_refs", { p_run_id: run.id, p_refs: refs as unknown as Json });
+          if (error) throw error;
+        }
         return await buildDraftInput(
           db,
           row.company_id,
-          row.input_refs as unknown as ConceptRefs,
+          refs as ConceptRefs,
           { conceptId, draftId, guidance: String(run.params.guidance ?? "") },
           String(run.params.judge_model ?? run.model),
         );
@@ -130,6 +140,31 @@ function createRunStore(): RunStore {
         p_payload: payload as unknown as Json,
       });
       if (error) throw error;
+    },
+
+    async feedbackInput(run) {
+      const row = rows.get(run.id)!;
+      const ids = [run.params.before_version_id, run.params.version_id].map((id) => (typeof id === "string" ? id : ""));
+      const { data } = await db
+        .from("draft_versions")
+        .select("id, body, draft:drafts(concept:concepts(format))")
+        .eq("company_id", row.company_id)
+        .in("id", ids);
+      const before = data?.find((v) => v.id === ids[0]);
+      const after = data?.find((v) => v.id === ids[1]);
+      if (!before || !after) throw new RunInputError("The versions to compare no longer exist.");
+      return { before: before.body, after: after.body, format: after.draft?.concept?.format ?? null };
+    },
+
+    async completeFeedback(runId, servedModel, usage, signals) {
+      const { data, error } = await db.rpc("complete_feedback_run", {
+        p_run_id: runId,
+        p_served_model: servedModel,
+        p_usage: usageJson(usage),
+        p_signals: signals as unknown as Json,
+      });
+      if (error) throw error;
+      return data;
     },
 
     async fail(runId, code, message, retryAfterSeconds, usage) {
@@ -165,6 +200,18 @@ function usageJson(usage: {
 /** Runs one just-requested run (called after the admin's request returns). */
 export async function runGenerationNow(runId: string) {
   await requireAdmin();
+  return processRun(createRunStore(), llmProvider(), runId);
+}
+
+/**
+ * Runs one run a founder just started (a rewrite request). The run must be
+ * theirs; anything else is left for the cron tick.
+ */
+export async function runFounderGenerationNow(runId: string) {
+  const viewer = await requireFounder();
+  const db = createSupabaseAdminClient();
+  const { data } = await db.from("generation_runs").select("requested_by, kind").eq("id", runId).maybeSingle();
+  if (!data || data.requested_by !== viewer.userId || data.kind !== "rewrite") return null;
   return processRun(createRunStore(), llmProvider(), runId);
 }
 

@@ -35,3 +35,20 @@ export function findPlaceholders(body: string): (Span & { request: string })[] {
 }
 
 export const LINKEDIN_MAX_CHARACTERS = 3000;
+
+export type VersionText = { body: string; alternativeHooks: string[]; selectedHookIndex: number | null };
+
+/** The selected opening line, normalized like the body, or null (SQL: private.selected_hook). */
+export function selectedHook(version: VersionText): string | null {
+  if (version.selectedHookIndex === null) return null;
+  return normalizeBody(version.alternativeHooks[version.selectedHookIndex] ?? "");
+}
+
+/**
+ * PRODUCT_SPEC §7.4: an edit is material if it changes the normalized body or
+ * the selected opening line. Unselected alternative lines are suggestions.
+ * The database trigger private.invalidate_on_material_edit applies the same rule.
+ */
+export function isMaterialEdit(before: VersionText, after: VersionText): boolean {
+  return bodyHash(before.body) !== bodyHash(after.body) || selectedHook(before) !== selectedHook(after);
+}

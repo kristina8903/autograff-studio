@@ -3,13 +3,21 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { Badge, Button, Card, PageHeader, Select, cx } from "@/components/ui";
+import { WordDiff } from "@/components/word-diff";
 import { requireAdmin } from "@/lib/auth/dal";
 import { monthLabel } from "@/lib/domain/dates";
-import { diffWords } from "@/lib/domain/diff";
 import { DRAFT_STATUS_LABELS, isEditable, nextStates } from "@/lib/domain/draft-states";
 import { usd } from "@/lib/domain/pricing";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { EditDraftForm, FlagForm, RegenerateDraftForm, TransitionButtons } from "../draft-forms";
+import {
+  AdminCommentForm,
+  EditDraftForm,
+  FlagForm,
+  RegenerateDraftForm,
+  ResolveCommentButton,
+  ShareForm,
+  TransitionButtons,
+} from "../draft-forms";
 
 export const metadata: Metadata = { title: "Draft" };
 export const maxDuration = 300;
@@ -37,7 +45,14 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
   const query = await searchParams;
 
   const supabase = await createSupabaseServerClient();
-  const [{ data: draft }, { data: versions }, { data: runs }] = await Promise.all([
+  const [
+    { data: draft },
+    { data: versions },
+    { data: runs },
+    { data: approvals },
+    { data: comments },
+    { data: rewrites },
+  ] = await Promise.all([
     supabase
       .from("drafts")
       .select("*, founder:founders(display_name, role_title), concept:concepts(id, title, core_argument)")
@@ -53,10 +68,25 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
     supabase
       .from("generation_runs")
       .select("id, status, error_message, created_at")
-      .eq("kind", "draft_regen")
+      .in("kind", ["draft_regen", "rewrite"])
       .contains("params", { draft_id: id })
       .order("created_at", { ascending: false })
       .limit(5),
+    supabase
+      .from("approvals")
+      .select("*, approver:profiles(email), version:draft_versions!approvals_draft_version_id_fkey(version_no)")
+      .eq("draft_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("comments")
+      .select("*, author:profiles!comments_author_user_id_fkey(email), version:draft_versions(version_no)")
+      .eq("draft_id", id)
+      .order("created_at"),
+    supabase
+      .from("rewrite_requests")
+      .select("id, instructions, status, created_at, version:draft_versions(version_no)")
+      .eq("draft_id", id)
+      .order("created_at", { ascending: false }),
   ]);
   if (!draft || !versions?.length) notFound();
 
@@ -73,6 +103,8 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
   const regenerating = (runs ?? []).some((r) => r.status === "queued" || r.status === "running");
   const lastFailed = (runs ?? []).find((r) => r.status === "failed" || r.status === "refused");
   const editable = isEditable(draft.status);
+  const regenerable = draft.status === "drafting" || draft.status === "admin_review";
+  const shareable = draft.status === "admin_review" || draft.status === "changes_requested";
   const hook = shown.selected_hook_index !== null ? shown.alternative_hooks[shown.selected_hook_index] : null;
 
   return (
@@ -97,7 +129,11 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
             {openBlocking} blocking flag{openBlocking === 1 ? "" : "s"}
           </Badge>
         ) : null}
-        <TransitionButtons draftId={draft.id} status={draft.status} options={nextStates(draft.status)} />
+        <TransitionButtons
+          draftId={draft.id}
+          status={draft.status}
+          options={nextStates(draft.status).filter((to) => to !== "founder_review")}
+        />
       </div>
       {regenerating ? (
         <p role="status" className="mb-4 text-sm text-muted">
@@ -174,6 +210,7 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
                       </Badge>
                       <span className="text-muted">{f.kind.replaceAll("_", " ")}</span>
                       {f.status !== "open" ? <Badge>{f.status}</Badge> : null}
+                      {f.visible_to_founder ? <Badge>shown to founder</Badge> : null}
                     </div>
                     <p className="mt-1">{f.message}</p>
                     {f.span_start !== null && f.span_end !== null ? (
@@ -227,21 +264,7 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
               <h2 className="mb-2 text-sm font-semibold">
                 Changes from v{compared.version_no} to v{shown.version_no}
               </h2>
-              <p aria-label="Changes" className="whitespace-pre-wrap text-sm leading-relaxed">
-                {diffWords(compared.body, shown.body).map((part, i) =>
-                  part.kind === "same" ? (
-                    <span key={i}>{part.text}</span>
-                  ) : part.kind === "added" ? (
-                    <ins key={i} className="bg-success/15 text-success no-underline">
-                      {part.text}
-                    </ins>
-                  ) : (
-                    <del key={i} className="bg-danger/10 text-danger">
-                      {part.text}
-                    </del>
-                  ),
-                )}
-              </p>
+              <WordDiff before={compared.body} after={shown.body} />
             </Card>
           ) : null}
 
@@ -249,9 +272,110 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
             <h2 className="mb-1 text-sm font-semibold">Rationale (internal)</h2>
             <p className="text-sm text-muted">{shown.rationale || "None recorded."}</p>
           </Card>
+
+          <Card>
+            <h2 className="mb-3 text-sm font-semibold">Comments</h2>
+            {comments?.length ? (
+              <ul aria-label="Comments" className="mb-4 space-y-3 text-sm">
+                {comments.map((c) => (
+                  <li key={c.id} className={cx("rounded-md border border-border p-3", c.resolved_at && "opacity-60")}>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                      <span>
+                        {c.author_role === "admin" ? "Admin" : "Founder"} · {c.author?.email ?? "removed user"} · on v
+                        {c.version?.version_no}
+                      </span>
+                      <Badge tone={c.visibility === "shared" ? "accent" : "neutral"}>
+                        {c.visibility === "shared" ? "shared" : "internal"}
+                      </Badge>
+                      {c.resolved_at ? (
+                        <Badge>resolved</Badge>
+                      ) : (
+                        <ResolveCommentButton draftId={draft.id} commentId={c.id} />
+                      )}
+                    </div>
+                    {c.anchor && typeof c.anchor === "object" && "quote" in c.anchor ? (
+                      <p className="mt-1 text-xs text-muted">“{String(c.anchor.quote)}”</p>
+                    ) : null}
+                    <p className="mt-1 whitespace-pre-wrap">{c.body}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mb-4 text-sm text-muted">No comments yet.</p>
+            )}
+            <AdminCommentForm draftId={draft.id} shared={draft.shared_with_founder_at !== null} />
+          </Card>
         </div>
 
         <div className="space-y-6">
+          {shareable ? (
+            <Card className="h-fit">
+              <h2 className="mb-3 text-sm font-semibold">Founder review</h2>
+              <ShareForm
+                draftId={draft.id}
+                again={draft.shared_with_founder_at !== null}
+                flags={current.review_flags
+                  // Repetition flags quote other drafts, so they are never shared.
+                  .filter((f) => (f.status === "open" || f.visible_to_founder) && f.source !== "repetition")
+                  .map((f) => ({
+                    id: f.id,
+                    label: `${f.severity}: ${f.message}`,
+                    blocking: f.severity === "blocking" && f.status === "open",
+                  }))}
+              />
+            </Card>
+          ) : null}
+          <Card className="h-fit">
+            <h2 className="mb-3 text-sm font-semibold">Approval</h2>
+            {approvals?.length ? (
+              <ul aria-label="Approvals" className="space-y-2 text-xs">
+                {approvals.map((a) => (
+                  <li
+                    key={a.id}
+                    className={cx("rounded-md border border-border p-2", a.invalidated_at && "opacity-70")}
+                  >
+                    <span className="font-medium text-foreground">
+                      {a.decision === "approved" ? "Approved" : "Rejected"} v{a.version?.version_no}
+                    </span>{" "}
+                    {a.decision === "approved" && !a.invalidated_at ? <Badge tone="success">valid</Badge> : null}
+                    <span className="block text-muted">
+                      {a.approver?.email} ·{" "}
+                      {new Date(a.created_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                    </span>
+                    <span className="block font-mono text-muted">
+                      hash {a.body_hash.replace(/^\\x/, "").slice(0, 12)}
+                    </span>
+                    {a.note ? <span className="block">“{a.note}”</span> : null}
+                    {a.invalidated_at ? (
+                      <span className="block text-danger">
+                        Withdrawn: {a.invalidated_reason}
+                        {a.invalidated_at
+                          ? ` · ${new Date(a.invalidated_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`
+                          : ""}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">
+                {draft.shared_with_founder_at ? "Not approved yet." : "Not shared with the founder yet."}
+              </p>
+            )}
+          </Card>
+          {rewrites?.length ? (
+            <Card className="h-fit">
+              <h2 className="mb-3 text-sm font-semibold">Founder&apos;s rewrite requests</h2>
+              <ul aria-label="Rewrite requests" className="space-y-2 text-xs">
+                {rewrites.map((r) => (
+                  <li key={r.id}>
+                    “{r.instructions}” · {r.status}
+                    {r.version ? ` · v${r.version.version_no}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
           <Card className="h-fit">
             <h2 className="mb-3 text-sm font-semibold">Versions</h2>
             <ol className="space-y-2 text-sm">
@@ -300,7 +424,7 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
               </form>
             ) : null}
           </Card>
-          {editable ? (
+          {regenerable ? (
             <Card className="h-fit">
               <h2 className="mb-3 text-sm font-semibold">Regenerate</h2>
               <RegenerateDraftForm draftId={draft.id} nonce={crypto.randomUUID()} />

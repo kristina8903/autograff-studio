@@ -4,6 +4,7 @@ import "server-only";
 // provider; the database implementation is lib/server/admin/generation.ts.
 
 import { metadataLeak, reviewDraft, type ClaimRecord, type FlagInput, type ModelFlag } from "@/lib/domain/draft-review";
+import type { PostFormat } from "@/lib/domain/formats";
 import { FAILURE_MESSAGES, retryDelaySeconds, type FailureKind } from "@/lib/domain/retry";
 import {
   CONCEPTS_MAX_OUTPUT_TOKENS,
@@ -20,6 +21,13 @@ import {
   draftSchema,
   type DraftPromptInput,
 } from "@/lib/prompts/draft.v1";
+import {
+  FEEDBACK_MAX_OUTPUT_TOKENS,
+  buildFeedbackPrompt,
+  cleanSignals,
+  feedbackSchema,
+  type FeedbackSignal,
+} from "@/lib/prompts/feedback.v1";
 import {
   REPETITION_JUDGE_MAX_OUTPUT_TOKENS,
   buildRepetitionJudgePrompt,
@@ -59,6 +67,9 @@ export type DraftPayload = {
   }[];
 };
 
+/** A founder's edits to classify: the text before their first edit and the text they approved. */
+export type FeedbackRunInput = { before: string; after: string; format: PostFormat | null };
+
 export interface RunStore {
   claim(runId?: string): Promise<ClaimedRun | null>;
   conceptInput(run: ClaimedRun): Promise<ConceptPromptInput>;
@@ -66,6 +77,8 @@ export interface RunStore {
   draftInput(run: ClaimedRun): Promise<DraftRunInput>;
   repetitionCandidates(run: ClaimedRun, text: string, argumentKey: string): Promise<RepetitionCandidate[]>;
   completeDraft(runId: string, servedModel: string, usage: Usage, payload: DraftPayload): Promise<void>;
+  feedbackInput(run: ClaimedRun): Promise<FeedbackRunInput>;
+  completeFeedback(runId: string, servedModel: string, usage: Usage, signals: FeedbackSignal[]): Promise<number>;
   fail(
     runId: string,
     code: FailureKind,
@@ -205,12 +218,30 @@ async function processDraft(store: RunStore, provider: LlmProvider, run: Claimed
   );
 }
 
+async function processFeedback(store: RunStore, provider: LlmProvider, run: ClaimedRun): Promise<void> {
+  const input = await store.feedbackInput(run);
+  const result = await provider.generateStructured({
+    task: "feedback",
+    model: run.model,
+    ...buildFeedbackPrompt(input),
+    untrustedContext: [],
+    schema: feedbackSchema,
+    maxOutputTokens: FEEDBACK_MAX_OUTPUT_TOKENS,
+    effort: "low",
+  });
+  await store.completeFeedback(run.id, result.servedModel, result.usage, cleanSignals(result.data.signals));
+}
+
 export async function processRun(store: RunStore, provider: LlmProvider, runId?: string): Promise<RunOutcome | null> {
   const run = await store.claim(runId);
   if (!run) return null;
   try {
-    if (run.kind === "draft" || run.kind === "draft_regen") {
+    if (run.kind === "draft" || run.kind === "draft_regen" || run.kind === "rewrite") {
       await processDraft(store, provider, run);
+      return { runId: run.id, status: "succeeded" };
+    }
+    if (run.kind === "feedback_classification") {
+      await processFeedback(store, provider, run);
       return { runId: run.id, status: "succeeded" };
     }
     if (run.kind !== "concept_batch" && run.kind !== "concept_regen")

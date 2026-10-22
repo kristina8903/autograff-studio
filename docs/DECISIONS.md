@@ -545,6 +545,70 @@ If spend runs high, the levers are, in order:
   judge model to score, from 1 to 5, how close the draft's voice is to the
   held-out post (style, not content).
 
+### D-32: Founder review and approval. **Decided in Phase 7 (2026-10-22)**
+
+- **Founders read through functions only.** `founder_drafts`,
+  `founder_draft_versions`, `founder_draft_flags`, `founder_comments` and
+  `founder_rewrite_requests` return the founder's own drafts, and only once
+  shared and in a founder-visible state. The draft tables stay admin-only.
+  - Never returned to a founder: the rationale, admin-internal comments, and
+    flags the admin did not share.
+  - Every open blocking flag is always returned, so the founder can see why
+    they can't approve.
+  - Repetition flags are never shown to a founder, even if the admin picks
+    one: they quote other drafts, which may be another founder's.
+- **What an approval binds to.** The normalized body hash *and* the selected
+  opening line (PRODUCT_SPEC §7.4 counts a change of the selected hook as
+  material). Unselected alternative opening lines are suggestions and are not
+  material.
+  - A valid approval is the live one whose hash and selected line match the
+    current version, from the draft's own founder.
+  - It is not tied to the version id. A whitespace-only edit makes a new
+    version but must keep the approval (§7.4), so DATA_MODEL §8's
+    "`draft_version_id = current`" is replaced by the hash match.
+- **Concurrent edits.** The founder approves the version id they were shown.
+  If the draft changed meanwhile, the approval is refused and the page says
+  so.
+- **Who moves what** (`lib/domain/draft-states.ts`, the same table as SQL):
+  - The admin shares (from admin review or changes requested), takes a draft
+    back for revision, rejects and archives. Taking back an approved draft
+    withdraws the approval.
+  - The founder approves, asks for changes, rejects, and withdraws their own
+    approval.
+  - A material edit returns the draft to admin review if the admin made it,
+    and to founder review if the founder or a rewrite did.
+- **Flags on edits.**
+  - Founder edits: placeholders are found again in SQL. Every other flag
+    carries over with its decision while the words it quotes are still in
+    the text. Lint is not re-run on the founder's own words; the admin sees
+    every founder version.
+  - Admin edits: a flag raised again for the same reason (same kind, source
+    and message, such as a claim still in the text) keeps its decision and
+    its shared state. Before this, resolving a claim and then fixing a typo
+    reopened the claim (found in the Phase 7 e2e test).
+- **Rewrites requested by a founder.**
+  - A rewrite is an AI run that writes a new version; nothing is overwritten.
+  - It uses the draft's own model, and reserves the full per-run ceiling,
+    fixed in the database, not by the caller.
+  - It is limited to 10 requests a day per founder (SECURITY §10), counting
+    refused and failed requests.
+  - The runner picks its inputs (brief version, voice version, examples) when
+    it runs, and records them on the run.
+- **Feedback from founder edits.** When a founder approves a draft they
+  edited, and those edits haven't been classified yet, one
+  `feedback_classification` run is queued.
+  - It reserves $0.10 and uses the cheaper model at low effort.
+  - It compares the version before their first new edit with the approved
+    one.
+  - It proposes stable preferences, format preferences and one-off edits,
+    never editorial corrections (the admin's kind). The admin accepts or
+    rejects them on the Feedback screen (Phase 3).
+  - The cron tick runs it.
+- **Comments** are anchored by the quoted text, not by character offsets,
+  because offsets break as soon as a new version is written.
+- **Notifications (D-20) are not built.** D-20 stays open. Founders see
+  waiting drafts on their dashboard and the Drafts page.
+
 ---
 
 ## 3. Inputs still needed from the user
@@ -570,4 +634,5 @@ If spend runs high, the levers are, in order:
 | 2026-10-21 | LinkedIn export import; D-27 added |
 | 2026-10-21 | Phase 4a built; D-28, D-29 added |
 | 2026-10-22 | Phase 4b built; D-30, D-31 added |
+| 2026-10-22 | Phase 7 built; D-32 added |
 | 2026-10-21 | User answers recorded: D-01, D-02, D-04, D-11, D-13, D-14, D-19 accepted; D-09, D-10 accepted on recommendation; D-15 deferred to Phase 3; D-16 and D-21 set by the $100/month budget |

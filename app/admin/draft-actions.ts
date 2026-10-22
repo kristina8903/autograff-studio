@@ -180,6 +180,7 @@ export async function resolveFlagAction(_state: ActionState, form: FormData): Pr
   return { message: action === "override" ? "Overridden." : "Resolved." };
 }
 
+// Sharing (to founder review) is shareDraftAction; approval is only ever the founder's.
 const TRANSITIONS = ["drafting", "admin_review", "rejected", "archived"] as const;
 
 export async function transitionDraftAction(_state: ActionState, form: FormData): Promise<ActionState> {
@@ -200,4 +201,51 @@ export async function transitionDraftAction(_state: ActionState, form: FormData)
 
 function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** Shares the current version with its founder, with the flags the admin chose to show them. */
+export async function shareDraftAction(_state: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const draftId = str(form, "draft_id");
+  if (!UUID.test(draftId)) return { error: "Draft not found." };
+  const flagIds = form
+    .getAll("visible_flag")
+    .map(String)
+    .filter((id) => UUID.test(id));
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("share_draft", { p_draft_id: draftId, p_visible_flag_ids: flagIds });
+  if (error)
+    return { error: error.code === "22023" ? capitalize(error.message) + "." : "Not shared. Reload the page." };
+  revalidatePath(`/admin/drafts/${draftId}`);
+  revalidatePath("/admin/drafts");
+  return { message: "Shared with the founder." };
+}
+
+export async function addAdminCommentAction(_state: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const draftId = str(form, "draft_id");
+  const body = str(form, "body");
+  if (!UUID.test(draftId)) return { error: "Draft not found." };
+  if (!body) return { error: "Write a comment first." };
+  if (body.length > 2000) return { error: "Keep a comment under 2,000 characters." };
+  const visibility = form.get("visibility") === "shared" ? "shared" : "admin_internal";
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("add_comment", {
+    p_draft_id: draftId,
+    p_body: body,
+    p_quote: str(form, "quote").slice(0, 500),
+    p_visibility: visibility,
+  });
+  if (error) return { error: "Not saved. Try again." };
+  revalidatePath(`/admin/drafts/${draftId}`);
+  return { message: visibility === "shared" ? "Comment shared with the founder." : "Internal note added." };
+}
+
+export async function resolveCommentAction(_state: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("resolve_comment", { p_comment_id: str(form, "comment_id") });
+  if (error) return { error: "Not changed. Reload the page." };
+  revalidatePath(`/admin/drafts/${str(form, "draft_id")}`);
+  return {};
 }

@@ -1,5 +1,8 @@
-// Draft states the admin can move to in Phase 4b (PRODUCT_SPEC §7.1). The
-// database function transition_draft enforces the same table.
+// The draft state machine (PRODUCT_SPEC §7.1), by role. The database
+// functions enforce the same table: transition_draft and share_draft for the
+// admin; approve_draft, request_changes, founder_reject_draft and
+// revoke_approval for the founder. Scheduling and publishing come later
+// (Phases 8 and 9), and only from a validly approved draft.
 
 export const DRAFT_STATUS_LABELS = {
   drafting: "drafting",
@@ -14,17 +17,73 @@ export const DRAFT_STATUS_LABELS = {
 } as const;
 
 export type DraftStatus = keyof typeof DRAFT_STATUS_LABELS;
+export type DraftRole = "admin" | "founder";
 
-const NEXT: Partial<Record<DraftStatus, DraftStatus[]>> = {
+/** How the founder sees each status they can see. */
+export const FOUNDER_STATUS_LABELS: Partial<Record<DraftStatus, string>> = {
+  founder_review: "ready for your review",
+  changes_requested: "changes requested",
+  approved: "approved",
+  scheduled: "scheduled",
+  published: "published",
+};
+
+const ADMIN_NEXT: Partial<Record<DraftStatus, DraftStatus[]>> = {
   drafting: ["admin_review", "rejected", "archived"],
-  admin_review: ["drafting", "rejected", "archived"],
+  // Sharing (to founder_review) is its own action: share_draft.
+  admin_review: ["drafting", "founder_review", "rejected", "archived"],
+  founder_review: ["admin_review", "rejected", "archived"],
+  changes_requested: ["admin_review", "founder_review", "rejected", "archived"],
+  // Withdraws the founder's approval.
+  approved: ["admin_review", "rejected", "archived"],
   archived: ["admin_review"],
 };
 
-export function nextStates(status: DraftStatus): DraftStatus[] {
-  return NEXT[status] ?? [];
+const FOUNDER_NEXT: Partial<Record<DraftStatus, DraftStatus[]>> = {
+  founder_review: ["approved", "changes_requested", "rejected"],
+  changes_requested: ["rejected"],
+  // Revoking their approval.
+  approved: ["founder_review"],
+};
+
+export function nextStates(status: DraftStatus, role: DraftRole = "admin"): DraftStatus[] {
+  return (role === "admin" ? ADMIN_NEXT : FOUNDER_NEXT)[status] ?? [];
 }
 
-export function isEditable(status: DraftStatus): boolean {
-  return status === "drafting" || status === "admin_review";
+export function canTransition(role: DraftRole, from: DraftStatus, to: DraftStatus): boolean {
+  return nextStates(from, role).includes(to);
+}
+
+/** Statuses in which a shared draft is visible to its founder (private.founder_visible). */
+export function founderVisible(status: DraftStatus): boolean {
+  return status in FOUNDER_STATUS_LABELS;
+}
+
+/**
+ * Whether the role can save a new version. An edit to an approved draft that
+ * changes its normalized text withdraws the approval (§7.4).
+ */
+export function isEditable(status: DraftStatus, role: DraftRole = "admin"): boolean {
+  const editable: DraftStatus[] =
+    role === "admin"
+      ? ["drafting", "admin_review", "founder_review", "changes_requested", "approved"]
+      : ["founder_review", "changes_requested", "approved"];
+  return editable.includes(status);
+}
+
+/**
+ * Why the founder can't approve yet, or null when they can. A person must
+ * still choose to approve: no open flags is never approval by itself.
+ */
+export function approvalBlocker(input: {
+  status: DraftStatus;
+  placeholderCount: number;
+  openBlockingFlags: number;
+}): string | null {
+  if (input.status !== "founder_review") return "Only a draft that is ready for your review can be approved.";
+  if (input.placeholderCount > 0)
+    return `Replace ${input.placeholderCount === 1 ? "the [FOUNDER TO SUPPLY] placeholder" : `all ${input.placeholderCount} [FOUNDER TO SUPPLY] placeholders`} first.`;
+  if (input.openBlockingFlags > 0)
+    return `${input.openBlockingFlags === 1 ? "A blocking flag is" : `${input.openBlockingFlags} blocking flags are`} still open. Edit the text, or ask for changes.`;
+  return null;
 }

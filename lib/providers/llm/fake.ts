@@ -118,8 +118,25 @@ function fakeRepetitionJudge(request: StructuredRequest<unknown>) {
   };
 }
 
+/** One stable preference and one one-off edit whenever the text changed. */
+function fakeFeedback(request: StructuredRequest<unknown>) {
+  const text = (label: string) => request.trustedContext.find((b) => b.label === label)?.text ?? "";
+  if (text("Before the founder's edits") === text("As the founder approved it")) return { signals: [] };
+  return {
+    signals: [
+      {
+        kind: "stable_preference",
+        statement: "Fake signal: replaces generic lines with a concrete example.",
+        format: null,
+      },
+      { kind: "one_off", statement: "Fake signal: added a detail specific to this post.", format: null },
+    ],
+  };
+}
+
 const DEFAULT_HANDLERS: Partial<Record<StructuredRequest<unknown>["task"], Handler>> = {
   concepts: fakeConcepts,
   draft: fakeDraft,
   repetition_judge: fakeRepetitionJudge,
+  feedback: fakeFeedback,
 };
