@@ -8,7 +8,7 @@ import {
   type DraftRole,
   type DraftStatus,
 } from "./draft-states";
-import { isMaterialEdit, type VersionText } from "./drafts";
+import { isMaterialEdit, publishableText, type VersionText } from "./drafts";
 
 const STATUSES = Object.keys(DRAFT_STATUS_LABELS) as DraftStatus[];
 
@@ -31,8 +31,15 @@ describe("draft state machine (PRODUCT_SPEC §7.1)", () => {
       ["changes_requested", "rejected"],
       ["changes_requested", "archived"],
       ["approved", "admin_review"],
+      ["approved", "scheduled"],
+      ["approved", "published"],
       ["approved", "rejected"],
       ["approved", "archived"],
+      ["scheduled", "approved"],
+      ["scheduled", "admin_review"],
+      ["scheduled", "published"],
+      ["scheduled", "rejected"],
+      ["scheduled", "archived"],
       ["archived", "admin_review"],
     ],
     founder: [
@@ -41,6 +48,7 @@ describe("draft state machine (PRODUCT_SPEC §7.1)", () => {
       ["founder_review", "rejected"],
       ["changes_requested", "rejected"],
       ["approved", "founder_review"],
+      ["scheduled", "founder_review"],
     ],
   };
 
@@ -53,13 +61,17 @@ describe("draft state machine (PRODUCT_SPEC §7.1)", () => {
     });
   }
 
-  it("only the founder approves; nobody moves a draft to scheduled or published yet, or out of rejected", () => {
+  it("only the founder approves; only an approved draft is scheduled or published; nothing leaves published or rejected", () => {
+    const gated = ["approved", "scheduled"];
     for (const from of STATUSES) {
-      expect(canTransition("admin", from, "approved")).toBe(false);
+      expect(canTransition("admin", from, "approved"), from).toBe(from === "scheduled"); // unscheduling
+      expect(canTransition("admin", from, "scheduled"), from).toBe(from === "approved");
+      expect(canTransition("admin", from, "published"), from).toBe(gated.includes(from));
       for (const role of ["admin", "founder"] as const) {
-        expect(canTransition(role, from, "scheduled")).toBe(false);
-        expect(canTransition(role, from, "published")).toBe(false);
+        expect(canTransition("founder", from, "scheduled")).toBe(false);
+        expect(canTransition("founder", from, "published")).toBe(false);
         expect(canTransition(role, "rejected", from)).toBe(false);
+        expect(canTransition(role, "published", from)).toBe(false);
       }
     }
   });
@@ -76,6 +88,7 @@ describe("draft state machine (PRODUCT_SPEC §7.1)", () => {
       "founder_review",
       "changes_requested",
       "approved",
+      "scheduled",
     ]);
     expect(STATUSES.filter((s) => isEditable(s, "admin"))).toEqual([
       "drafting",
@@ -83,6 +96,7 @@ describe("draft state machine (PRODUCT_SPEC §7.1)", () => {
       "founder_review",
       "changes_requested",
       "approved",
+      "scheduled",
     ]);
   });
 });
@@ -139,5 +153,24 @@ describe("isMaterialEdit (PRODUCT_SPEC §7.4)", () => {
         { ...base, alternativeHooks: ["Who phones the fleet manager?"], selectedHookIndex: 0 },
       ),
     ).toBe(true);
+  });
+});
+
+describe("publishableText (the text that is copied and posted)", () => {
+  const version = {
+    body: "Repairs take time.\n\nAsk why.",
+    alternativeHooks: ["Who calls the fleet manager?", "Late vans cost money."],
+    selectedHookIndex: null as number | null,
+  };
+  it("is the body when no opening line is chosen", () => {
+    expect(publishableText(version)).toBe("Repairs take time.\n\nAsk why.");
+  });
+  it("puts the chosen opening line in place of the first line", () => {
+    expect(publishableText({ ...version, selectedHookIndex: 1 })).toBe("Late vans cost money.\n\nAsk why.");
+  });
+  it("puts it above a one-line body", () => {
+    expect(publishableText({ ...version, body: "Ask why.", selectedHookIndex: 0 })).toBe(
+      "Who calls the fleet manager?\n\nAsk why.",
+    );
   });
 });

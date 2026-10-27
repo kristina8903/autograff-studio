@@ -50,7 +50,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
     supabase.from("cadence_rules").select("*"),
     supabase
       .from("calendar_slots")
-      .select("id, founder_id, slot_date, kind, status, note")
+      .select("id, founder_id, slot_date, kind, status, note, draft:drafts(id, status, concept:concepts(title))")
       .gte("slot_date", firstDayOfMonth(month))
       .lte("slot_date", lastDayOfMonth(month))
       .order("slot_date")
@@ -142,7 +142,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
                   <td className="px-4 py-3">{c.required}</td>
                   <td className="px-4 py-3">{c.reservedTimely}</td>
                   <td className="px-4 py-3">{c.skipped}</td>
-                  <td className="px-4 py-3 text-muted">From Phase 4</td>
+                  <td className="px-4 py-3 text-muted">Pipeline view in Phase 8</td>
                 </tr>
               );
             })}
@@ -214,6 +214,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
                           >
                             {byId[s.founder_id].role_title}
                             {s.kind === "reserved_timely" ? " · news" : s.kind === "manual" ? " · added" : ""}
+                            {s.draft ? ` · ${s.draft.status === "published" ? "published" : "scheduled"}` : ""}
                           </span>
                         ))}
                       </div>
@@ -256,8 +257,13 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
                 </td>
                 <td className="px-4 py-2">
                   <Badge tone={s.status === "filled" ? "success" : s.status === "skipped" ? "neutral" : "accent"}>
-                    {s.status}
+                    {s.draft ? s.draft.status : s.status}
                   </Badge>
+                  {s.draft ? (
+                    <Link href={`/admin/drafts/${s.draft.id}`} className="block text-xs text-accent hover:underline">
+                      {s.draft.concept?.title ?? "Draft"}
+                    </Link>
+                  ) : null}
                 </td>
                 <td className="px-4 py-2">
                   {s.slot_date >= today ? (

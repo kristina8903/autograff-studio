@@ -5,7 +5,17 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { Badge, Button, Card, PageHeader, Select, cx } from "@/components/ui";
 import { WordDiff } from "@/components/word-diff";
 import { requireAdmin } from "@/lib/auth/dal";
-import { monthLabel } from "@/lib/domain/dates";
+import {
+  addMonths,
+  lastDayOfMonth,
+  localDateTime,
+  localToday,
+  monthLabel,
+  monthOf,
+  shortDateLabel,
+} from "@/lib/domain/dates";
+import { publishableText } from "@/lib/domain/drafts";
+import { METRIC_KEYS, METRIC_LABELS } from "@/lib/domain/reports";
 import { DRAFT_STATUS_LABELS, isEditable, nextStates } from "@/lib/domain/draft-states";
 import { usd } from "@/lib/domain/pricing";
 import { dateLabel } from "@/lib/domain/research";
@@ -19,6 +29,13 @@ import {
   ShareForm,
   TransitionButtons,
 } from "../draft-forms";
+import {
+  CopyApprovedButton,
+  MetricsForm,
+  RecordPublicationForm,
+  ScheduleForm,
+  UnscheduleButton,
+} from "../../publishing-forms";
 
 export const metadata: Metadata = { title: "Draft" };
 export const maxDuration = 300;
@@ -56,7 +73,7 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
   ] = await Promise.all([
     supabase
       .from("drafts")
-      .select("*, founder:founders(display_name, role_title), concept:concepts(id, title, core_argument)")
+      .select("*, founder:founders(display_name, role_title, timezone), concept:concepts(id, title, core_argument)")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -108,6 +125,38 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
   const shareable = draft.status === "admin_review" || draft.status === "changes_requested";
   const hook = shown.selected_hook_index !== null ? shown.alternative_hooks[shown.selected_hook_index] : null;
 
+  // Publishing (Phase 9): only an approved, scheduled or published draft.
+  const publishing = ["approved", "scheduled", "published"].includes(draft.status);
+  const timeZone = draft.founder?.timezone ?? "UTC";
+  const [{ data: publication }, { data: slots }] = publishing
+    ? await Promise.all([
+        supabase
+          .from("publications")
+          .select("*, performance_snapshots(captured_at, metrics)")
+          .eq("draft_id", draft.id)
+          .order("captured_at", { referencedTable: "performance_snapshots", ascending: false })
+          .maybeSingle(),
+        supabase
+          .from("calendar_slots")
+          .select("id, slot_date, kind, status, draft_id")
+          .eq("founder_id", draft.founder_id)
+          .gte("slot_date", localToday(timeZone))
+          .lte("slot_date", lastDayOfMonth(addMonths(monthOf(draft.target_month), 1)))
+          .or(`status.eq.open,draft_id.eq.${draft.id}`)
+          .order("slot_date"),
+      ])
+    : [{ data: null }, { data: [] }];
+  const currentSlot = (slots ?? []).find((s) => s.draft_id === draft.id) ?? null;
+  const toPost = publishableText({
+    body: current.body,
+    alternativeHooks: current.alternative_hooks,
+    selectedHookIndex: current.selected_hook_index,
+  });
+  const defaultScheduleTime = draft.scheduled_for
+    ? localDateTime(timeZone, new Date(draft.scheduled_for))
+    : `${currentSlot?.slot_date ?? draft.proposed_date ?? localToday(timeZone)}T09:00`;
+  const latestMetrics = publication?.performance_snapshots[0] ?? null;
+
   return (
     <>
       <AutoRefresh active={regenerating} />
@@ -133,7 +182,10 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
         <TransitionButtons
           draftId={draft.id}
           status={draft.status}
-          options={nextStates(draft.status).filter((to) => to !== "founder_review")}
+          // Sharing, scheduling and publishing have their own forms.
+          options={nextStates(draft.status).filter((to) =>
+            ["drafting", "admin_review", "rejected", "archived"].includes(to),
+          )}
         />
       </div>
       {regenerating ? (
@@ -148,6 +200,102 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/ad
 
       <div className="grid gap-6 lg:grid-cols-[1fr_17rem]">
         <div className="space-y-6">
+          {publishing ? (
+            <Card>
+              <h2 className="mb-3 text-sm font-semibold">Publishing</h2>
+              {publication ? (
+                <div className="space-y-3 text-sm" aria-label="Publication">
+                  <p>
+                    Published{" "}
+                    {new Date(publication.published_at).toLocaleString("en-US", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                      timeZone,
+                    })}{" "}
+                    ·{" "}
+                    <a
+                      href={publication.linkedin_url}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      className="text-accent hover:underline"
+                    >
+                      View on LinkedIn
+                    </a>
+                  </p>
+                  {publication.differs_from_approved && publication.approved_text ? (
+                    <div>
+                      <Badge tone="danger">posted text differs from the approved version</Badge>
+                      <div className="mt-2 rounded-md border border-border p-3">
+                        <WordDiff before={publication.approved_text} after={publication.published_text} />
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-muted">Posted exactly as approved.</p>
+                  )}
+                  <div className="border-t border-border pt-3">
+                    <h3 className="mb-2 text-xs font-semibold text-muted">Metrics</h3>
+                    {latestMetrics ? (
+                      <p className="mb-2 text-xs">
+                        As of {new Date(latestMetrics.captured_at).toLocaleDateString("en-US", { dateStyle: "medium" })}
+                        :{" "}
+                        {METRIC_KEYS.filter(
+                          (k) => typeof (latestMetrics.metrics as Record<string, unknown>)[k] === "number",
+                        )
+                          .map(
+                            (k) =>
+                              `${METRIC_LABELS[k]} ${(latestMetrics.metrics as Record<string, number>)[k].toLocaleString("en-US")}`,
+                          )
+                          .join(" · ")}
+                      </p>
+                    ) : null}
+                    <MetricsForm publicationId={publication.id} draftId={draft.id} />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <div>
+                    <h3 className="mb-1 text-xs font-semibold text-muted">Text to post</h3>
+                    <pre
+                      aria-label="Text to post"
+                      className="mb-2 whitespace-pre-wrap rounded-md border border-border bg-background p-3 font-sans text-sm"
+                    >
+                      {toPost}
+                    </pre>
+                    <CopyApprovedButton draftId={draft.id} />
+                  </div>
+                  <div className="grid gap-6 border-t border-border pt-4 sm:grid-cols-2">
+                    <div>
+                      <h3 className="mb-2 text-xs font-semibold text-muted">
+                        {draft.status === "scheduled" && draft.scheduled_for
+                          ? `Scheduled for ${new Date(draft.scheduled_for).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone })}`
+                          : "Schedule"}
+                      </h3>
+                      <ScheduleForm
+                        draftId={draft.id}
+                        defaultTime={defaultScheduleTime}
+                        timeZone={timeZone}
+                        scheduled={draft.status === "scheduled"}
+                        currentSlotId={currentSlot?.id ?? null}
+                        slots={(slots ?? []).map((s) => ({
+                          id: s.id,
+                          label: `${shortDateLabel(s.slot_date)}${s.draft_id === draft.id ? " (this draft)" : ""}`,
+                        }))}
+                      />
+                      {draft.status === "scheduled" ? (
+                        <div className="mt-3">
+                          <UnscheduleButton draftId={draft.id} />
+                        </div>
+                      ) : null}
+                    </div>
+                    <div>
+                      <h3 className="mb-2 text-xs font-semibold text-muted">Record the publication</h3>
+                      <RecordPublicationForm draftId={draft.id} defaultTime={localDateTime(timeZone, new Date())} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Card>
+          ) : null}
           <Card>
             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted">
               <span className="font-semibold text-foreground">Version {shown.version_no}</span>

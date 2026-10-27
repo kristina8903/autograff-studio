@@ -25,13 +25,31 @@ const fixtures: { day: number; kind: SlotRow["kind"]; status: SlotRow["status"] 
   { day: 31, kind: "manual", status: "filled" },
 ];
 
+const draftIds: string[] = [];
+
 afterAll(async () => {
   await db.from("calendar_slots").delete().eq("founder_id", COO).gte("slot_date", MONTH);
+  if (draftIds.length) await db.from("drafts").delete().in("id", draftIds);
 });
 
 describe("coverage parity", () => {
   it("SQL and TypeScript slot counts agree", async () => {
     const { data: rule } = await db.from("cadence_rules").select("id").eq("founder_id", COO).single();
+    // A filled slot holds a real draft (bare rows; their content doesn't matter here).
+    const filled = fixtures.filter((f) => f.status === "filled");
+    const { data: drafts, error: draftError } = await db
+      .from("drafts")
+      .insert(
+        filled.map(() => ({
+          company_id: COMPANY,
+          founder_id: COO,
+          target_month: MONTH,
+          brief_version_id: "00000000-0000-4000-8000-0000000000b1",
+        })),
+      )
+      .select("id");
+    expect(draftError).toBeNull();
+    draftIds.push(...drafts!.map((d) => d.id));
     const rows = fixtures.map((f) => ({
       company_id: COMPANY,
       founder_id: COO,
@@ -39,7 +57,7 @@ describe("coverage parity", () => {
       kind: f.kind,
       status: f.status,
       cadence_rule_id: f.kind === "manual" ? null : rule!.id,
-      draft_id: f.status === "filled" ? crypto.randomUUID() : null,
+      draft_id: f.status === "filled" ? draftIds[filled.indexOf(f)] : null,
     }));
     const inserted = await db.from("calendar_slots").insert(rows);
     expect(inserted.error).toBeNull();

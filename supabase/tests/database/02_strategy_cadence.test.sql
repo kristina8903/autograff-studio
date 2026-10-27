@@ -141,9 +141,15 @@ select is(public.sync_calendar_slots('00000000-0000-4000-8000-0000000000f1', (se
   '{"created": 0, "removed": 0, "outside_cadence": []}'::jsonb, 'planning again is idempotent');
 select results_eq($$select count(*)::int from public.calendar_slots where founder_id = '00000000-0000-4000-8000-0000000000f1'$$, $$values (3)$$, 'no duplicate slots');
 
--- Fill one planned slot (drafts arrive in Phase 4) and skip another.
+-- Fill one planned slot (with a bare draft row: drafts arrive in Phase 4) and skip another.
 reset role;
-update public.calendar_slots set status = 'filled', draft_id = gen_random_uuid()
+with d as (
+  insert into public.drafts (company_id, founder_id, target_month, brief_version_id)
+  values ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000f1', '2026-11-01',
+    '00000000-0000-4000-8000-0000000000b1')
+  returning id
+)
+update public.calendar_slots set status = 'filled', draft_id = (select id from d)
  where founder_id = '00000000-0000-4000-8000-0000000000f1' and slot_date = (select value::date + 2 from t where key = 'plan');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","aal":"aal2"}', true);

@@ -374,6 +374,13 @@ export type Database = {
             referencedColumns: ["user_id"];
           },
           {
+            foreignKeyName: "calendar_slots_draft_fk";
+            columns: ["draft_id"];
+            isOneToOne: false;
+            referencedRelation: "drafts";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "calendar_slots_founder_id_fkey";
             columns: ["founder_id"];
             isOneToOne: false;
@@ -1309,6 +1316,62 @@ export type Database = {
           },
         ];
       };
+      performance_snapshots: {
+        Row: {
+          captured_at: string;
+          company_id: string;
+          created_at: string;
+          id: string;
+          metrics: NonNullable<Json>;
+          publication_id: string;
+          recorded_by: string | null;
+          source: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          captured_at: string;
+          company_id: string;
+          created_at?: string;
+          id?: string;
+          metrics: NonNullable<Json>;
+          publication_id: string;
+          recorded_by?: string | null;
+          source?: string;
+        };
+        Update: {
+          captured_at?: string;
+          company_id?: string;
+          created_at?: string;
+          id?: string;
+          metrics?: NonNullable<Json>;
+          publication_id?: string;
+          recorded_by?: string | null;
+          source?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "performance_snapshots_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "performance_snapshots_publication_id_fkey";
+            columns: ["publication_id"];
+            isOneToOne: false;
+            referencedRelation: "publications";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "performance_snapshots_recorded_by_fkey";
+            columns: ["recorded_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           activated_at: string | null;
@@ -1361,6 +1424,110 @@ export type Database = {
           {
             foreignKeyName: "profiles_invited_by_fkey";
             columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      publications: {
+        Row: {
+          approval_id: string | null;
+          approved_text: string | null;
+          approved_version_id: string | null;
+          company_id: string;
+          created_at: string;
+          differs_from_approved: boolean;
+          draft_id: string | null;
+          external_post_id: string | null;
+          founder_id: string;
+          id: string;
+          is_external: boolean;
+          linkedin_url: string;
+          method: string;
+          published_at: string;
+          published_text: string;
+          published_text_hash: string;
+          recorded_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          approval_id?: string | null;
+          approved_text?: string | null;
+          approved_version_id?: string | null;
+          company_id: string;
+          created_at?: string;
+          differs_from_approved?: boolean;
+          draft_id?: string | null;
+          external_post_id?: string | null;
+          founder_id: string;
+          id?: string;
+          is_external?: boolean;
+          linkedin_url: string;
+          method?: string;
+          published_at: string;
+          published_text: string;
+          published_text_hash: string;
+          recorded_by?: string | null;
+        };
+        Update: {
+          approval_id?: string | null;
+          approved_text?: string | null;
+          approved_version_id?: string | null;
+          company_id?: string;
+          created_at?: string;
+          differs_from_approved?: boolean;
+          draft_id?: string | null;
+          external_post_id?: string | null;
+          founder_id?: string;
+          id?: string;
+          is_external?: boolean;
+          linkedin_url?: string;
+          method?: string;
+          published_at?: string;
+          published_text?: string;
+          published_text_hash?: string;
+          recorded_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "publications_approval_id_fkey";
+            columns: ["approval_id"];
+            isOneToOne: false;
+            referencedRelation: "approvals";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "publications_approved_version_id_fkey";
+            columns: ["approved_version_id"];
+            isOneToOne: false;
+            referencedRelation: "draft_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "publications_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "publications_draft_id_fkey";
+            columns: ["draft_id"];
+            isOneToOne: true;
+            referencedRelation: "drafts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "publications_founder_id_fkey";
+            columns: ["founder_id"];
+            isOneToOne: false;
+            referencedRelation: "founders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "publications_recorded_by_fkey";
+            columns: ["recorded_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["user_id"];
@@ -1837,6 +2004,7 @@ export type Database = {
           ai_per_run_ceiling_usd: number;
           allowed_email_domains: string[];
           company_id: string;
+          publications_become_examples: boolean;
           research_allowed_domains: string[];
           research_blocked_domains: string[];
           updated_at: string;
@@ -1848,6 +2016,7 @@ export type Database = {
           ai_per_run_ceiling_usd?: number;
           allowed_email_domains?: string[];
           company_id: string;
+          publications_become_examples?: boolean;
           research_allowed_domains?: string[];
           research_blocked_domains?: string[];
           updated_at?: string;
@@ -1858,6 +2027,7 @@ export type Database = {
           ai_per_run_ceiling_usd?: number;
           allowed_email_domains?: string[];
           company_id?: string;
+          publications_become_examples?: boolean;
           research_allowed_domains?: string[];
           research_blocked_domains?: string[];
           updated_at?: string;
@@ -2124,6 +2294,10 @@ export type Database = {
         Args: { p_date: string; p_founder_id: string; p_note: string; p_today: string };
         Returns: string;
       };
+      add_performance_snapshot: {
+        Args: { p_captured_at: string; p_metrics: Json; p_publication_id: string };
+        Returns: string;
+      };
       add_writing_examples: { Args: { p_founder_id: string; p_items: Json }; Returns: Json };
       admin_deactivate_user: { Args: { p_user_id: string }; Returns: undefined };
       admin_set_user_role: {
@@ -2139,6 +2313,7 @@ export type Database = {
         }[];
       };
       approve_draft: { Args: { p_draft_id: string; p_note: string; p_version_id: string }; Returns: string };
+      approved_text: { Args: { p_draft_id: string }; Returns: string };
       claim_generation_run: {
         Args: { p_run_id?: string };
         Returns: {
@@ -2291,6 +2466,15 @@ export type Database = {
           version_no: number;
         }[];
       };
+      founder_publishing: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          draft_id: string;
+          linkedin_url: string;
+          published_at: string;
+          scheduled_for: string;
+        }[];
+      };
       founder_reject_draft: { Args: { p_draft_id: string; p_note: string }; Returns: undefined };
       founder_rewrite_requests: {
         Args: { p_draft_id: string };
@@ -2311,6 +2495,14 @@ export type Database = {
           p_user_id: string;
         };
         Returns: undefined;
+      };
+      record_external_publication: {
+        Args: { p_founder_id: string; p_linkedin_url: string; p_published_at: string; p_published_text: string };
+        Returns: string;
+      };
+      record_publication: {
+        Args: { p_draft_id: string; p_linkedin_url: string; p_published_at: string; p_published_text: string };
+        Returns: string;
       };
       record_sign_in: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Enums"]["user_status"] };
       repetition_candidates: {
@@ -2418,6 +2610,7 @@ export type Database = {
         };
         Returns: number;
       };
+      schedule_draft: { Args: { p_draft_id: string; p_scheduled_for: string; p_slot_id: string }; Returns: undefined };
       set_cadence_rule: {
         Args: {
           p_buffer_target: number;
@@ -2441,6 +2634,7 @@ export type Database = {
         Args: { p_concept_id: string; p_status: Database["public"]["Enums"]["concept_status"] };
         Returns: undefined;
       };
+      set_publications_become_examples: { Args: { p_on: boolean }; Returns: undefined };
       set_research_domains: { Args: { p_allowed: string[]; p_blocked: string[] }; Returns: undefined };
       set_run_input_refs: { Args: { p_refs: Json; p_run_id: string }; Returns: undefined };
       share_draft: { Args: { p_draft_id: string; p_visible_flag_ids: string[] }; Returns: undefined };
@@ -2452,6 +2646,7 @@ export type Database = {
         Args: { p_draft_id: string; p_reason: string; p_to: Database["public"]["Enums"]["draft_status"] };
         Returns: undefined;
       };
+      unschedule_draft: { Args: { p_draft_id: string }; Returns: undefined };
       update_concept: {
         Args: {
           p_audience: string;

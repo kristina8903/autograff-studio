@@ -163,6 +163,7 @@ const TAKE_BACK: Record<string, string> = {
   founder_review: "Take back for revision",
   changes_requested: "Take back for revision",
   approved: "Withdraw approval and revise",
+  scheduled: "Withdraw approval and revise",
   archived: "Restore to review",
 };
 
