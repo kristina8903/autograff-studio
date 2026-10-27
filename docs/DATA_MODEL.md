@@ -188,6 +188,38 @@
 >   (`scheduled_for`).
 > - Publications and metrics are admin-only. Founders see their own
 >   scheduled and published dates and links through `founder_publishing`.
+>
+> **Implemented in Phase 8 (migration `20261025000001_pipeline.sql`):**
+> `settings.batch_size_concepts` (default 5) and `settings.batch_size_drafts`
+> (default 3), set by the admin through `set_batch_sizes` (audited), and these
+> read-only, admin-only functions:
+>
+> - `coverage_draft_buckets(founder, from, to)`: each of the founder's drafts,
+>   the facts that decide its bucket, and its one bucket;
+> - `coverage(founder, from, to, today)`: the §12.3 counts for a period of
+>   whole days (`to` exclusive), plus the drafts never counted, and the next
+>   open slot not kept for news;
+> - `candidate_supply(founder, month)`: the §12.4 inputs for one month, the
+>   selected concepts waiting for a draft, and both batch sizes;
+> - helpers `private.require_coverage_access` and `private.repeats_published`.
+>
+> Differences from §12 below (D-35):
+>
+> - `coverage` is a function, not a view, so that it takes a period and a
+>   date. The coverage status, the shortfall flag and the replenishment batch
+>   are computed in TypeScript from its counts (`lib/domain/coverage.ts`).
+> - Buckets beyond §12.3, all never supply: scheduled outside the period,
+>   approved but repeating published content, approval no longer valid,
+>   published drafts, external drafts, rejected or archived.
+> - "Near-duplicate of published content" is an open repetition warning on
+>   the current version against a published LinkedIn post or a published
+>   studio draft. Resolving or overriding the warning returns the draft to the
+>   buffer.
+> - `published` counts publications by the founder's local date, studio and
+>   external alike.
+> - `low_buffer_threshold` is a count of approved posts, as the cadence form
+>   says ("Warn when buffer falls below"), not a number of days. A gap is
+>   `short` when the next open slot is within 7 days.
 
 Status: **Phase 0 proposal**, 2026-10-21. Postgres (Supabase). Nothing here is
 migrated yet. Table and column names are proposals that will be finalized in
@@ -703,7 +735,9 @@ coverage_status   =
   'at_risk' if supply_gap = 0 and usable_buffer <  buffer_target
            or supply_gap > 0 and supply_gap <= pipeline_after
   'short'   otherwise, or if supply_gap > 0 and the next unfilled slot is within
-            low_buffer_threshold days
+            7 days (D-35; slots kept for news are not "unfilled")
+
+shortfall_flag    = usable_buffer < low_buffer_threshold   -- a count of posts (D-35)
 ```
 
 A `scheduled` draft whose approval was invalidated is automatically moved out
@@ -717,6 +751,8 @@ candidates_existing = concepts(proposed|selected) + live drafts not yet approved
                       for target month
 candidate_need      = max(0, candidate_target_max − candidates_existing − usable_buffer − scheduled)
 batch               = min(candidate_need, settings.batch_size_concepts)
+draft_batch         = min(selected concepts for the month with no live draft,
+                          settings.batch_size_drafts)                       -- D-35
 ```
 
 If `candidate_need = 0`, the dashboard says supply is sufficient and offers

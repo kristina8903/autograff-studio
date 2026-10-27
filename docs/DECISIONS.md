@@ -711,6 +711,65 @@ If spend runs high, the levers are, in order:
   cadence's range. They show the brief's theme and the concept's format for
   studio posts, and "Outside the studio" for external ones.
 
+### D-35: Pipeline management. **Decided in Phase 8 (2026-10-27)**
+
+- **One bucket per draft.** Coverage is computed once, in SQL
+  (`coverage_draft_buckets`, `coverage`). `lib/domain/coverage.ts` holds the
+  same rule, for property tests, and a parity test checks the two on every
+  combination of status, external, approval and repetition warning.
+  - Supply is only two buckets: scheduled in the period with a valid
+    approval, and approved with a valid approval (the usable buffer).
+  - Pipeline, shown and never counted: founder review; admin review
+    (drafting, admin review, changes requested); selected concepts with no
+    live draft.
+  - Never counted, and shown apart: scheduled outside the period, approved
+    but repeating published content, approval no longer valid, published,
+    external, rejected or archived.
+- **A near-duplicate of published content** is an approved draft whose current
+  version has an open repetition warning against a published post. It stays
+  out of the buffer until the warning is resolved, or overridden with a
+  reason. A warning against content that is not published doesn't hold it
+  back.
+- **Thresholds.**
+  - The shortfall flag ("Buffer low") shows when the usable buffer is below
+    the founder's `low_buffer_threshold`. That setting is a count of posts,
+    as the cadence form has always said. DATA_MODEL §12.3 read it as days,
+    which contradicted the form and Phase 8's criterion 3.
+  - The status follows §12.3, with "the next unfilled slot is close" fixed at
+    7 days. Slots kept for news don't count as unfilled, because they are not
+    filled with planned content.
+  - The rule in effect today sets the buffer thresholds. The rule in effect
+    in the target month sets the candidate ceiling.
+- **Replenishment** targets the month of the next open slot in the period,
+  else the first month of the period not yet past.
+  - A top-up asks, after one confirmation step, for two things:
+    - new concepts: `min(need, settings.batch_size_concepts)`, default 5;
+    - drafts of the month's **selected** concepts with no live draft, oldest
+      first: `min(waiting, settings.batch_size_drafts)`, default 3.
+  - The admin sets both sizes on the Pipeline page (`set_batch_sizes`,
+    audited), within 1–10 concepts and 1–5 drafts.
+  - New concepts are never drafted by the same top-up. They arrive as
+    proposals, and only concepts the admin selected are drafted, so nothing
+    is written from a concept no one chose.
+  - The server recomputes both counts and refuses when supply is
+    sufficient, or when the need changed since the page loaded.
+  - Every run goes through the usual cost estimate and ceilings. Drafts go to
+    admin review, so they are pipeline, never supply.
+- **The diversity report** reads the month's live drafts (not external)
+  through their current version's fingerprint, with the concept's format as
+  a fallback.
+  - Hot spots: the same argument key in two or more drafts, across founders.
+  - A topic, format, hook, product mention or call to action used by more
+    than half of a month's drafts, from 4 drafts up, per founder or overall.
+  - Drafts with open repetition warnings.
+- **The combined calendar** filters by founder and by state (open,
+  scheduled, published, kept for news, skipped). It shows posts scheduled or
+  published outside any slot, including external posts, on their founder's
+  local date.
+- **Read-only.** Nothing on the Pipeline page approves, schedules or
+  publishes. The coverage functions are `stable` and admin-only. Founders
+  get no coverage view (D-13).
+
 ---
 
 ## 3. Inputs still needed from the user
@@ -739,4 +798,5 @@ If spend runs high, the levers are, in order:
 | 2026-10-22 | Phase 7 built; D-32 added |
 | 2026-10-22 | Phase 5 built; D-33 added; checklist items 10–11 verified |
 | 2026-10-22 | Phase 9 built; D-34 added |
+| 2026-10-27 | Phase 8 built; D-35 added |
 | 2026-10-21 | User answers recorded: D-01, D-02, D-04, D-11, D-13, D-14, D-19 accepted; D-09, D-10 accepted on recommendation; D-15 deferred to Phase 3; D-16 and D-21 set by the $100/month budget |

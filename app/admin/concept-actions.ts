@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/dal";
-import { isIsoMonth } from "@/lib/domain/dates";
+import { firstDayOfMonth, isIsoMonth } from "@/lib/domain/dates";
 import { isPostFormat } from "@/lib/domain/formats";
 import { estimateMaxCost } from "@/lib/domain/pricing";
 import { lines } from "@/lib/domain/briefs";
@@ -21,7 +21,9 @@ import {
   resolveConceptRefs,
   type ConceptRefs,
 } from "@/lib/server/generation/context";
+import { requestDraftRun } from "@/lib/server/generation/draft-run";
 import { startRun } from "@/lib/server/generation/request";
+import { MAX_DRAFTS_PER_TOP_UP, loadPipeline } from "@/lib/server/pipeline";
 import type { Json } from "@/lib/supabase/database.types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -160,5 +162,89 @@ export async function updateConceptAction(_state: ActionState, form: FormData): 
   });
   if (error) return { error: "Not saved. Only proposed or selected concepts can be edited." };
   revalidatePath("/admin/concepts");
+  return { message: "Saved." };
+}
+
+/**
+ * The pipeline's top-up (DATA_MODEL §12.4), after the admin confirmed it: new
+ * concepts for the need, and drafts of concepts the admin already selected.
+ * Both counts are recomputed here, never taken from the form, and a top-up
+ * never asks for more than the confirmed counts or the batch sizes.
+ */
+export async function replenishAction(_state: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const founderId = str(form, "founder_id");
+  const month = str(form, "month");
+  const concepts = Number(form.get("concepts"));
+  const drafts = Number(form.get("drafts"));
+  if (!UUID.test(founderId) || !isIsoMonth(month)) return { error: "Choose a founder and month." };
+  if (!Number.isInteger(concepts) || !Number.isInteger(drafts) || concepts < 0 || drafts < 0)
+    return { error: "Reload and confirm again." };
+  const [pipeline] = await loadPipeline({ first: month, months: 1 }, founderId);
+  if (!pipeline || pipeline.targetMonth !== month || pipeline.targetPast)
+    return { error: "That month can't be topped up." };
+  const { batch, draftBatch } = pipeline.replenishment;
+  if (batch === 0 && draftBatch === 0) return { error: "Supply is already sufficient. Nothing was generated." };
+  if (concepts > batch || drafts > draftBatch || concepts + drafts === 0)
+    return { error: "The need changed since the page loaded. Reload and confirm again." };
+
+  const nonce = str(form, "nonce");
+  const done: string[] = [];
+  const problems: string[] = [];
+  if (concepts > 0) {
+    const result = await requestRun({
+      kind: "concept_batch",
+      founderId,
+      month,
+      count: concepts,
+      nonce,
+      replacing: null,
+    });
+    if (result.error) problems.push(`Concepts: ${result.error}`);
+    else done.push(`${concepts} concept${concepts === 1 ? "" : "s"}`);
+  }
+  if (drafts > 0) {
+    // The selected concepts of the month with no live draft, oldest first.
+    const supabase = await createSupabaseServerClient();
+    const { data: selected } = await supabase
+      .from("concepts")
+      .select("id, drafts(status)")
+      .eq("founder_id", founderId)
+      .eq("target_month", firstDayOfMonth(month))
+      .eq("status", "selected")
+      .order("created_at");
+    const waiting = (selected ?? [])
+      .filter((c) => c.drafts.every((d) => d.status === "rejected" || d.status === "archived"))
+      .slice(0, drafts);
+    let requested = 0;
+    for (const concept of waiting) {
+      const result = await requestDraftRun("draft", concept.id, null, "", nonce);
+      if (result.error) {
+        problems.push(`Drafts: ${result.error}`);
+        break;
+      }
+      requested += 1;
+    }
+    if (requested) done.push(`${requested} draft${requested === 1 ? "" : "s"}`);
+  }
+  revalidatePath("/admin/pipeline");
+  const asked = done.length ? `Asked for ${done.join(" and ")}.` : "";
+  if (problems.length) return { error: [asked, ...problems].filter(Boolean).join(" ") };
+  return { message: `${asked} They appear on the Concepts and Drafts pages when ready.` };
+}
+
+/** The top-up batch sizes (PRODUCT_SPEC §5.4). */
+export async function setBatchSizesAction(_state: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const concepts = Number(form.get("concepts"));
+  const drafts = Number(form.get("drafts"));
+  if (!Number.isInteger(concepts) || concepts < 1 || concepts > MAX_CONCEPTS_PER_RUN)
+    return { error: `Concepts: 1 to ${MAX_CONCEPTS_PER_RUN}.` };
+  if (!Number.isInteger(drafts) || drafts < 1 || drafts > MAX_DRAFTS_PER_TOP_UP)
+    return { error: `Drafts: 1 to ${MAX_DRAFTS_PER_TOP_UP}.` };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("set_batch_sizes", { p_concepts: concepts, p_drafts: drafts });
+  if (error) return { error: "Not saved. Reload the page." };
+  revalidatePath("/admin/pipeline");
   return { message: "Saved." };
 }

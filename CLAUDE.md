@@ -40,8 +40,10 @@ the same change when behavior changes.
   trying it on staging. Phase 5 (industry research) is built and tested
   (2026-10-22); its real web search runs once staging has the key. Phase 9
   (assisted publishing and reporting) is built and tested (2026-10-22); its
-  definition of done is the MVP acceptance check on staging. Phase 8 is next
-  in the agreed order and is not approved to start.**
+  definition of done is the MVP acceptance check on staging. Phase 8
+  (pipeline management) is built and tested (2026-10-27); with it, every MVP
+  acceptance criterion has local evidence. Go-live is next in the agreed
+  order and is not approved to start.**
 - Phase order is agreed (D-19): 1, 2, 3, 4, 7, 5, 9, 8, go-live, 6, 10.
 - End each phase with a report:
   - what was built;

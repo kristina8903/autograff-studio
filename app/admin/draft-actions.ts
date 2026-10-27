@@ -4,87 +4,18 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/dal";
 import { lines, readSnapshot } from "@/lib/domain/briefs";
 import { carryClaims, reviewDraft, type ModelClaim } from "@/lib/domain/draft-review";
-import { estimateMaxCost } from "@/lib/domain/pricing";
 import { readVoiceVersion } from "@/lib/domain/voice";
-import { DRAFT_MAX_OUTPUT_TOKENS, DRAFT_TEMPLATE, DRAFT_VERSION, buildDraftPrompt } from "@/lib/prompts/draft.v2";
-import { REPETITION_JUDGE_MAX_OUTPUT_TOKENS } from "@/lib/prompts/repetition-judge.v1";
-import { llmModels } from "@/lib/providers/llm";
-import { promptText } from "@/lib/providers/llm/types";
-import {
-  MissingInputError,
-  buildDraftInput,
-  loadFindings,
-  resolveDraftRefs,
-  usableFindingIds,
-} from "@/lib/server/generation/context";
-import { startRun } from "@/lib/server/generation/request";
+import { loadFindings, usableFindingIds } from "@/lib/server/generation/context";
+import { requestDraftRun } from "@/lib/server/generation/draft-run";
 import type { Json } from "@/lib/supabase/database.types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ActionState = { error?: string; message?: string };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-// Room for the judge's prompt: the draft, five excerpts and its instructions.
-const JUDGE_PROMPT_CHARACTERS = 6000 + 5 * 300 + 2000;
 
 function str(form: FormData, key: string): string {
   return String(form.get(key) ?? "").trim();
-}
-
-async function requestDraftRun(
-  kind: "draft" | "draft_regen",
-  conceptId: string,
-  draftId: string | null,
-  guidance: string,
-  nonce: string,
-) {
-  const supabase = await createSupabaseServerClient();
-  const { data: concept } = await supabase
-    .from("concepts")
-    .select("company_id, founder_id, target_month, status")
-    .eq("id", conceptId)
-    .maybeSingle();
-  if (!concept) return { error: "Concept not found." };
-  if (kind === "draft" && !["selected", "drafted"].includes(concept.status))
-    return { error: "Select the concept before writing a draft." };
-
-  const models = llmModels();
-  let estimate: number;
-  let refs;
-  try {
-    refs = await resolveDraftRefs(supabase, concept.company_id, conceptId);
-    const input = await buildDraftInput(
-      supabase,
-      concept.company_id,
-      refs,
-      { conceptId, draftId, guidance },
-      models.extract,
-    );
-    const length = promptText(buildDraftPrompt(input.prompt)).length;
-    estimate =
-      estimateMaxCost(models.draft, length, DRAFT_MAX_OUTPUT_TOKENS) +
-      estimateMaxCost(models.extract, JUDGE_PROMPT_CHARACTERS, REPETITION_JUDGE_MAX_OUTPUT_TOKENS);
-  } catch (error) {
-    if (error instanceof MissingInputError) return { error: error.message };
-    throw error;
-  }
-
-  const result = await startRun({
-    kind,
-    founderId: concept.founder_id,
-    month: concept.target_month.slice(0, 7),
-    model: models.draft,
-    template: DRAFT_TEMPLATE,
-    templateVersion: DRAFT_VERSION,
-    refs: refs as unknown as Json,
-    params: { concept_id: conceptId, judge_model: models.extract, ...(draftId ? { draft_id: draftId, guidance } : {}) },
-    estimate,
-    keyParts: [conceptId, draftId ?? "", nonce],
-  });
-  revalidatePath("/admin/drafts");
-  revalidatePath("/admin/concepts");
-  revalidatePath("/admin/ai");
-  return result;
 }
 
 export async function requestDraftAction(_state: ActionState, form: FormData): Promise<ActionState> {
