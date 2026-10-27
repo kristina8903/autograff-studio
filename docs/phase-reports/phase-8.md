@@ -20,9 +20,9 @@ generators, under the same cost ceilings.
 
 | Command | Result |
 |---|---|
-| `npm run check` | pass; **229/229** unit tests (212 before, 17 new in `coverage.test.ts` and `diversity.test.ts`) |
-| `npm run test:db` | pgTAP **590/590** (557 before, 33 new in `09_pipeline.test.sql`); parity **13/13** (one new: the bucket parity) |
-| `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium npm run test:e2e` | **75/75** (67 before, 8 new in `e2e/pipeline.spec.ts`), zero CSP violations; includes `npm run build` |
+| `npm run check` | pass; **230/230** unit tests (212 before, 18 new in `coverage.test.ts` and `diversity.test.ts`) |
+| `npm run test:db` | pgTAP **600/600** (557 before, 43 new in `09_pipeline.test.sql`); parity **13/13** (one new: the bucket parity) |
+| `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium npm run test:e2e` | **76/76** (67 before, 9 new in `e2e/pipeline.spec.ts`), zero CSP violations; includes `npm run build` |
 | `npm audit --omit=dev` | 0 vulnerabilities |
 
 Failures during the build, all fixed before the final run:
