@@ -1,8 +1,33 @@
+import { execFileSync } from "node:child_process";
 import { expect, type Page } from "@playwright/test";
 import { TOTP } from "otpauth";
 
 const MAILPIT = "http://127.0.0.1:54324/api/v1";
 export const SUPABASE_URL = "http://127.0.0.1:54321";
+
+/**
+ * Resets the local database, then waits until the API serves the schema and
+ * Auth answers again. The reset restarts both, and a sign-in sent in that
+ * window fails (seen once in CI as a sign-in stuck on the code page).
+ */
+export async function resetDatabase(stdio: "ignore" | "inherit" = "ignore") {
+  execFileSync("npx", ["supabase", "db", "reset"], { stdio });
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
+  for (let attempt = 0; attempt < 120; attempt++) {
+    // While the API reloads its schema it answers 503 (PGRST002). Once it is
+    // back, an anonymous read of this table is refused (401), which is fine.
+    const ready = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/companies?select=id&limit=1`, { headers: { apikey: key } }),
+      fetch(`${SUPABASE_URL}/auth/v1/health`, { headers: { apikey: key } }),
+    ]).then(
+      ([rest, auth]) => rest.status < 500 && auth.ok,
+      () => false,
+    );
+    if (ready) return;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error("The local Supabase API did not come back after the reset");
+}
 
 type MailSummary = { ID: string; Created: string; To: { Address: string }[] };
 

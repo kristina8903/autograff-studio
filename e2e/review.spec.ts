@@ -1,6 +1,5 @@
-import { execFileSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
-import { SUPABASE_URL, accessTokenFrom, signInAdmin, signInWithCode } from "./helpers";
+import { SUPABASE_URL, accessTokenFrom, resetDatabase, signInAdmin, signInWithCode } from "./helpers";
 
 // Phase 7 acceptance criteria: sharing, founder review, approval, the
 // material-edit rule, rewrites. Against the fake AI provider (no real calls).
@@ -26,7 +25,7 @@ const founderPath = () => draftPath.replace("/admin/drafts/", "/drafts/");
 const flags = (page: Page) => page.getByRole("list", { name: "Review flags" }).locator(":scope > li");
 
 test.beforeAll(async ({ browser }) => {
-  execFileSync("npx", ["supabase", "db", "reset"], { stdio: "ignore" });
+  await resetDatabase();
   admin = await (await browser.newContext()).newPage();
   founder = await (await browser.newContext()).newPage();
   watchCsp(admin);

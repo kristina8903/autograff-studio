@@ -1,6 +1,5 @@
-import { execFileSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
-import { SUPABASE_URL, accessTokenFrom, signInAdmin, signInWithCode } from "./helpers";
+import { SUPABASE_URL, accessTokenFrom, resetDatabase, signInAdmin, signInWithCode } from "./helpers";
 
 // Phase 9 acceptance criteria: schedule → copy → record, against the fake AI.
 test.describe.configure({ mode: "serial" });
@@ -25,7 +24,7 @@ const watchCsp = (page: Page) =>
 test.beforeAll(async ({ browser }) => {
   // Setup takes a draft through review to approval.
   test.setTimeout(180_000);
-  execFileSync("npx", ["supabase", "db", "reset"], { stdio: "ignore" });
+  await resetDatabase();
   // The admin's browser may use the clipboard, so the copied text can be read back.
   admin = await (await browser.newContext({ permissions: ["clipboard-read", "clipboard-write"] })).newPage();
   founder = await (await browser.newContext()).newPage();

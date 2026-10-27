@@ -1,8 +1,7 @@
-import { execFileSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
 import { generateSlots, monthTargets, type CadenceRule } from "../lib/domain/cadence";
 import { addMonths, localToday, monthLabel, monthOf } from "../lib/domain/dates";
-import { signInAdmin, signInWithCode } from "./helpers";
+import { resetDatabase, signInAdmin, signInWithCode } from "./helpers";
 
 // Phase 2 acceptance criteria (docs/PHASES.md) as one ordered story.
 test.describe.configure({ mode: "serial" });
@@ -29,7 +28,7 @@ const ceoRule: CadenceRule = {
 
 test.beforeAll(async ({ browser }) => {
   // Fresh seed: this file must not depend on what foundation.spec.ts changed.
-  execFileSync("npx", ["supabase", "db", "reset"], { stdio: "ignore" });
+  await resetDatabase();
   admin = await (await browser.newContext()).newPage();
   await signInAdmin(admin, ADMIN, mfa);
 });

@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
-import { signInAdmin, signInWithCode } from "./helpers";
+import { resetDatabase, signInAdmin, signInWithCode } from "./helpers";
 
 // Phase 4a acceptance criteria, against the fake AI provider (no real calls).
 test.describe.configure({ mode: "serial" });
@@ -24,7 +24,7 @@ const ceoCards = () => ceoConcepts().locator(":scope > li");
 const ceoSection = () => admin.getByRole("region", { name: "Concepts for Local CEO" });
 
 test.beforeAll(async ({ browser }) => {
-  execFileSync("npx", ["supabase", "db", "reset"], { stdio: "ignore" });
+  await resetDatabase();
   admin = await (await browser.newContext()).newPage();
   admin.on("console", (message) => {
     if (/Content Security Policy|Refused to (execute|load|apply)/i.test(message.text()))

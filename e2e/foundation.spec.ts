@@ -1,6 +1,5 @@
-import { execFileSync } from "node:child_process";
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { SUPABASE_URL, accessTokenFrom, freshTotp, latestEmail, signInWithCode } from "./helpers";
+import { SUPABASE_URL, accessTokenFrom, freshTotp, latestEmail, resetDatabase, signInWithCode } from "./helpers";
 
 // Phase 1 acceptance criteria (docs/PHASES.md) as one ordered story.
 test.describe.configure({ mode: "serial" });
@@ -13,8 +12,8 @@ let adminTotpSecret = "";
 
 // Fresh seed: this file needs an admin who has not enrolled an authenticator,
 // whatever other spec files ran before it.
-test.beforeAll(() => {
-  execFileSync("npx", ["supabase", "db", "reset"], { stdio: "ignore" });
+test.beforeAll(async () => {
+  await resetDatabase();
 });
 let adminPage: Page;
 let founderPage: Page;

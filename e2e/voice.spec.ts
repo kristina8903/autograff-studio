@@ -1,7 +1,6 @@
-import { execFileSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
 import { buildZip } from "../tests/zip-fixture";
-import { accessTokenFrom, signInAdmin, signInWithCode, SUPABASE_URL } from "./helpers";
+import { SUPABASE_URL, accessTokenFrom, resetDatabase, signInAdmin, signInWithCode } from "./helpers";
 
 // Phase 3 acceptance criteria (docs/PHASES.md) as one ordered story.
 test.describe.configure({ mode: "serial" });
@@ -15,7 +14,7 @@ let admin: Page;
 
 test.beforeAll(async ({ browser }) => {
   // Fresh seed: this file must not depend on what other spec files changed.
-  execFileSync("npx", ["supabase", "db", "reset"], { stdio: "ignore" });
+  await resetDatabase();
   admin = await (await browser.newContext()).newPage();
   await signInAdmin(admin, ADMIN, mfa);
 });
