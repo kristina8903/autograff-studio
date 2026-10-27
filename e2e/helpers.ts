@@ -6,12 +6,18 @@ const MAILPIT = "http://127.0.0.1:54324/api/v1";
 export const SUPABASE_URL = "http://127.0.0.1:54321";
 
 /**
- * Resets the local database, then waits until the API serves the schema and
- * Auth answers again. The reset restarts both, and a sign-in sent in that
- * window fails (seen once in CI as a sign-in stuck on the code page).
+ * Resets the local database and waits until its APIs serve again.
+ *
+ * The reset restarts Postgres and Auth but not the REST API, whose pooled
+ * connections then point at the old server: the first signed-in calls fail
+ * with 57P01 ("terminating connection") or PGRST001, about half the time in a
+ * local reproduction. In CI that made record_sign_in fail and an admin
+ * sign-in stop at "This account doesn't have access". Restarting the REST
+ * container gives it a fresh pool (120 of 120 calls succeeded after it).
  */
 export async function resetDatabase(stdio: "ignore" | "inherit" = "ignore") {
   execFileSync("npx", ["supabase", "db", "reset"], { stdio });
+  execFileSync("docker", ["restart", "supabase_rest_autograff-studio"], { stdio });
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
   for (let attempt = 0; attempt < 120; attempt++) {
     // While the API reloads its schema it answers 503 (PGRST002). Once it is
