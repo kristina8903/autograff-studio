@@ -57,6 +57,14 @@ export async function signInWithCode(page: Page, email: string) {
   if (!code) throw new Error("No code in email");
   await page.getByLabel("Code from the email").fill(code);
   await page.getByRole("button", { name: "Sign in" }).click();
+  // Leaving the code page means the code was accepted. If it never does, fail
+  // with what the page says, so a CI log shows why (it has, twice, without it).
+  try {
+    await expect(page).not.toHaveURL(/\/sign-in\/verify$/, { timeout: 15_000 });
+  } catch {
+    const shown = (await page.getByRole("alert").allTextContents()).join(" | ");
+    throw new Error(`Sign-in stayed on the code page for ${email}: ${shown || "no message shown"}`);
+  }
 }
 
 /** A TOTP code that has not been used before (the Auth server rejects reuse within a window). */
