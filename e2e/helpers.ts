@@ -1,8 +1,39 @@
+import { execFileSync } from "node:child_process";
 import { expect, type Page } from "@playwright/test";
 import { TOTP } from "otpauth";
 
 const MAILPIT = "http://127.0.0.1:54324/api/v1";
 export const SUPABASE_URL = "http://127.0.0.1:54321";
+
+/**
+ * Resets the local database and waits until its APIs serve again.
+ *
+ * The reset restarts Postgres and Auth but not the REST API, whose pooled
+ * connections then point at the old server: the first signed-in calls fail
+ * with 57P01 ("terminating connection") or PGRST001, about half the time in a
+ * local reproduction. In CI that made record_sign_in fail and an admin
+ * sign-in stop at "This account doesn't have access". Restarting the REST
+ * container gives it a fresh pool (120 of 120 calls succeeded after it).
+ */
+export async function resetDatabase(stdio: "ignore" | "inherit" = "ignore") {
+  execFileSync("npx", ["supabase", "db", "reset"], { stdio });
+  execFileSync("docker", ["restart", "supabase_rest_autograff-studio"], { stdio });
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
+  for (let attempt = 0; attempt < 120; attempt++) {
+    // While the API reloads its schema it answers 503 (PGRST002). Once it is
+    // back, an anonymous read of this table is refused (401), which is fine.
+    const ready = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/companies?select=id&limit=1`, { headers: { apikey: key } }),
+      fetch(`${SUPABASE_URL}/auth/v1/health`, { headers: { apikey: key } }),
+    ]).then(
+      ([rest, auth]) => rest.status < 500 && auth.ok,
+      () => false,
+    );
+    if (ready) return;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error("The local Supabase API did not come back after the reset");
+}
 
 type MailSummary = { ID: string; Created: string; To: { Address: string }[] };
 
@@ -32,6 +63,14 @@ export async function signInWithCode(page: Page, email: string) {
   if (!code) throw new Error("No code in email");
   await page.getByLabel("Code from the email").fill(code);
   await page.getByRole("button", { name: "Sign in" }).click();
+  // Leaving the code page means the code was accepted. If it never does, fail
+  // with what the page says, so a CI log shows why (it has, twice, without it).
+  try {
+    await expect(page).not.toHaveURL(/\/sign-in\/verify$/, { timeout: 15_000 });
+  } catch {
+    const shown = (await page.getByRole("alert").allTextContents()).join(" | ");
+    throw new Error(`Sign-in stayed on the code page for ${email}: ${shown || "no message shown"}`);
+  }
 }
 
 /** A TOTP code that has not been used before (the Auth server rejects reuse within a window). */

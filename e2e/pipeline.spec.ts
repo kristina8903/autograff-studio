@@ -1,6 +1,5 @@
-import { execFileSync } from "node:child_process";
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { signInAdmin } from "./helpers";
+import { resetDatabase, signInAdmin } from "./helpers";
 
 // Phase 8: the dashboard shows a shortfall, and the admin generates a
 // replenishment batch through the fake AI provider (no real calls).
@@ -21,7 +20,7 @@ const cto = () => admin.getByRole("region", { name: "Pipeline for Local CTO" });
 
 test.beforeAll(async ({ browser }) => {
   test.setTimeout(120_000);
-  execFileSync("npx", ["supabase", "db", "reset"], { stdio: "ignore" });
+  await resetDatabase();
   admin = await (await browser.newContext()).newPage();
   admin.on("console", (message) => {
     if (/Content Security Policy|Refused to (execute|load|apply)/i.test(message.text()))
