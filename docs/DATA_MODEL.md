@@ -190,14 +190,17 @@
 >   scheduled and published dates and links through `founder_publishing`.
 >
 > **Implemented in Phase 8 (migration `20261025000001_pipeline.sql`):**
-> `settings.batch_size_concepts` and these read-only, admin-only functions:
+> `settings.batch_size_concepts` (default 5) and `settings.batch_size_drafts`
+> (default 3), set by the admin through `set_batch_sizes` (audited), and these
+> read-only, admin-only functions:
 >
 > - `coverage_draft_buckets(founder, from, to)`: each of the founder's drafts,
 >   the facts that decide its bucket, and its one bucket;
 > - `coverage(founder, from, to, today)`: the §12.3 counts for a period of
 >   whole days (`to` exclusive), plus the drafts never counted, and the next
 >   open slot not kept for news;
-> - `candidate_supply(founder, month)`: the §12.4 inputs for one month;
+> - `candidate_supply(founder, month)`: the §12.4 inputs for one month, the
+>   selected concepts waiting for a draft, and both batch sizes;
 > - helpers `private.require_coverage_access` and `private.repeats_published`.
 >
 > Differences from §12 below (D-35):
@@ -748,6 +751,8 @@ candidates_existing = concepts(proposed|selected) + live drafts not yet approved
                       for target month
 candidate_need      = max(0, candidate_target_max − candidates_existing − usable_buffer − scheduled)
 batch               = min(candidate_need, settings.batch_size_concepts)
+draft_batch         = min(selected concepts for the month with no live draft,
+                          settings.batch_size_drafts)                       -- D-35
 ```
 
 If `candidate_need = 0`, the dashboard says supply is sufficient and offers

@@ -2004,6 +2004,7 @@ export type Database = {
           ai_per_run_ceiling_usd: number;
           allowed_email_domains: string[];
           batch_size_concepts: number;
+          batch_size_drafts: number;
           company_id: string;
           publications_become_examples: boolean;
           research_allowed_domains: string[];
@@ -2017,6 +2018,7 @@ export type Database = {
           ai_per_run_ceiling_usd?: number;
           allowed_email_domains?: string[];
           batch_size_concepts?: number;
+          batch_size_drafts?: number;
           company_id: string;
           publications_become_examples?: boolean;
           research_allowed_domains?: string[];
@@ -2029,6 +2031,7 @@ export type Database = {
           ai_per_run_ceiling_usd?: number;
           allowed_email_domains?: string[];
           batch_size_concepts?: number;
+          batch_size_drafts?: number;
           company_id?: string;
           publications_become_examples?: boolean;
           research_allowed_domains?: string[];
@@ -2321,9 +2324,11 @@ export type Database = {
         Args: { p_founder_id: string; p_month: string };
         Returns: {
           batch_size: number;
+          batch_size_drafts: number;
           concepts_open: number;
           drafts_in_progress: number;
           scheduled_in_month: number;
+          selected_waiting: number;
         }[];
       };
       claim_generation_run: {
@@ -2658,6 +2663,7 @@ export type Database = {
         Returns: number;
       };
       schedule_draft: { Args: { p_draft_id: string; p_scheduled_for: string; p_slot_id: string }; Returns: undefined };
+      set_batch_sizes: { Args: { p_concepts: number; p_drafts: number }; Returns: undefined };
       set_cadence_rule: {
         Args: {
           p_buffer_target: number;

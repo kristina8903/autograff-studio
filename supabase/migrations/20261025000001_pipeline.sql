@@ -6,10 +6,28 @@
 -- the TypeScript twin; tests/db/coverage-parity.test.ts checks they agree.
 -- Nothing here writes: no path in this phase approves, schedules or publishes.
 
--- The replenishment batch ceiling (PRODUCT_SPEC §5.4). Set by the owner with
--- SQL, like the budget; the CHECK caps it at one concept run.
+-- The top-up batch ceilings (PRODUCT_SPEC §5.4): concepts per run, and drafts
+-- written from waiting concepts per top-up. The admin sets them
+-- (set_batch_sizes); the CHECKs cap them at one concept run and five drafts.
 alter table public.settings
-  add column batch_size_concepts smallint not null default 5 check (batch_size_concepts between 1 and 10);
+  add column batch_size_concepts smallint not null default 5 check (batch_size_concepts between 1 and 10),
+  add column batch_size_drafts smallint not null default 3 check (batch_size_drafts between 1 and 5);
+
+create function public.set_batch_sizes(p_concepts integer, p_drafts integer) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_company uuid := private.require_admin();
+begin
+  if p_concepts is null or p_concepts not between 1 and 10 or p_drafts is null or p_drafts not between 1 and 5 then
+    raise exception 'concepts 1 to 10, drafts 1 to 5' using errcode = '22023';
+  end if;
+  update public.settings set batch_size_concepts = p_concepts, batch_size_drafts = p_drafts, updated_by = auth.uid(),
+    updated_at = now()
+  where company_id = v_company;
+  perform private.log_event(v_company, 'settings.batch_sizes', 'settings', null,
+    jsonb_build_object('concepts', p_concepts, 'drafts', p_drafts));
+end;
+$$;
 
 -- An admin of the founder's company, or the service role (parity tests).
 create function private.require_coverage_access(p_founder_id uuid) returns void
@@ -156,9 +174,11 @@ $$;
 
 -- What replenishment counts for one target month (DATA_MODEL §12.4):
 -- candidates not yet used (concepts with no live draft, live drafts not yet
--- approved) and drafts scheduled in the month.
+-- approved), drafts scheduled in the month, selected concepts of the month
+-- waiting for a draft, and the two batch ceilings.
 create function public.candidate_supply(p_founder_id uuid, p_month date)
-returns table (concepts_open integer, drafts_in_progress integer, scheduled_in_month integer, batch_size integer)
+returns table (concepts_open integer, drafts_in_progress integer, scheduled_in_month integer, selected_waiting integer,
+  batch_size integer, batch_size_drafts integer)
 language plpgsql stable security definer set search_path = '' as $$
 declare
   v_to date := (p_month + interval '1 month')::date;
@@ -178,8 +198,13 @@ begin
        and d.status in ('drafting', 'admin_review', 'founder_review', 'changes_requested'))::integer,
     (select count(*) from public.coverage_draft_buckets(p_founder_id, p_month, v_to) b
      where b.bucket = 'scheduled')::integer,
-    (select s.batch_size_concepts from public.settings s
-     join public.founders f on f.company_id = s.company_id where f.id = p_founder_id)::integer;
+    (select count(*) from public.concepts c
+     where c.founder_id = p_founder_id and c.target_month = p_month and c.status = 'selected'
+       and not exists (select 1 from public.drafts d
+                       where d.concept_id = c.id and d.status not in ('rejected', 'archived')))::integer,
+    s.batch_size_concepts::integer,
+    s.batch_size_drafts::integer
+  from public.settings s join public.founders f on f.company_id = s.company_id where f.id = p_founder_id;
 end;
 $$;
 
@@ -188,10 +213,12 @@ revoke all on function
   private.repeats_published(uuid),
   public.coverage_draft_buckets(uuid, date, date),
   public.coverage(uuid, date, date, date),
-  public.candidate_supply(uuid, date)
+  public.candidate_supply(uuid, date),
+  public.set_batch_sizes(integer, integer)
 from public, anon;
 grant execute on function
   public.coverage_draft_buckets(uuid, date, date),
   public.coverage(uuid, date, date, date),
   public.candidate_supply(uuid, date)
 to authenticated, service_role;
+grant execute on function public.set_batch_sizes(integer, integer) to authenticated;

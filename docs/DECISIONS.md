@@ -742,14 +742,19 @@ If spend runs high, the levers are, in order:
     in the target month sets the candidate ceiling.
 - **Replenishment** targets the month of the next open slot in the period,
   else the first month of the period not yet past.
-  - The batch is `min(need, settings.batch_size_concepts)`, default 5, set
-    by the owner with SQL like the budget.
-  - It asks only for concepts, after a confirmation step. The server
-    recomputes the need and refuses when supply is sufficient or the need
-    changed.
-  - The run goes through the usual cost estimate and ceilings.
-  - Drafting the waiting concepts stays a deliberate action on the Concepts
-    page.
+  - A top-up asks, after one confirmation step, for two things:
+    - new concepts: `min(need, settings.batch_size_concepts)`, default 5;
+    - drafts of the month's **selected** concepts with no live draft, oldest
+      first: `min(waiting, settings.batch_size_drafts)`, default 3.
+  - The admin sets both sizes on the Pipeline page (`set_batch_sizes`,
+    audited), within 1–10 concepts and 1–5 drafts.
+  - New concepts are never drafted by the same top-up. They arrive as
+    proposals, and only concepts the admin selected are drafted, so nothing
+    is written from a concept no one chose.
+  - The server recomputes both counts and refuses when supply is
+    sufficient, or when the need changed since the page loaded.
+  - Every run goes through the usual cost estimate and ceilings. Drafts go to
+    admin review, so they are pipeline, never supply.
 - **The diversity report** reads the month's live drafts (not external)
   through their current version's fingerprint, with the concept's format as
   a fallback.

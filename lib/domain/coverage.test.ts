@@ -212,21 +212,45 @@ describe("replenishment", () => {
     usableBuffer: 2,
     scheduled: 1,
     batchSize: 5,
+    selectedWaiting: 0,
+    batchSizeDrafts: 3,
   };
 
   it("proposes the need, capped at the batch size", () => {
-    expect(replenishment(base)).toEqual({ candidatesExisting: 7, need: 10, batch: 5 });
-    expect(replenishment({ ...base, candidateTargetMax: 13 })).toEqual({ candidatesExisting: 7, need: 3, batch: 3 });
+    expect(replenishment(base)).toEqual({ candidatesExisting: 7, need: 10, batch: 5, draftBatch: 0 });
+    expect(replenishment({ ...base, candidateTargetMax: 13 })).toEqual({
+      candidatesExisting: 7,
+      need: 3,
+      batch: 3,
+      draftBatch: 0,
+    });
   });
 
   it("proposes nothing when supply is sufficient", () => {
     expect(replenishment({ ...base, candidateTargetMax: 10 }).batch).toBe(0);
-    expect(replenishment({ ...base, candidateTargetMax: 0 })).toEqual({ candidatesExisting: 7, need: 0, batch: 0 });
+    expect(replenishment({ ...base, candidateTargetMax: 0 })).toEqual({
+      candidatesExisting: 7,
+      need: 0,
+      batch: 0,
+      draftBatch: 0,
+    });
+  });
+
+  it("drafts the selected concepts waiting, up to the draft batch size", () => {
+    expect(replenishment({ ...base, selectedWaiting: 2 }).draftBatch).toBe(2);
+    expect(replenishment({ ...base, selectedWaiting: 7 }).draftBatch).toBe(3);
+    expect(replenishment({ ...base, selectedWaiting: 0 }).draftBatch).toBe(0);
+    // Even when no new concepts are needed.
+    expect(replenishment({ ...base, candidateTargetMax: 0, selectedWaiting: 2 })).toMatchObject({
+      batch: 0,
+      draftBatch: 2,
+    });
   });
 
   it("never proposes more than the batch size, for any input", () => {
     const rand = prng(42);
     for (let i = 0; i < 1000; i++) {
+      const batchSizeDrafts = 1 + Math.floor(rand() * 5);
       const r = replenishment({
         candidateTargetMax: Math.floor(rand() * 30),
         conceptsOpen: Math.floor(rand() * 15),
@@ -234,9 +258,13 @@ describe("replenishment", () => {
         usableBuffer: Math.floor(rand() * 10),
         scheduled: Math.floor(rand() * 10),
         batchSize: 1 + Math.floor(rand() * 10),
+        selectedWaiting: Math.floor(rand() * 10),
+        batchSizeDrafts,
       });
       expect(r.batch).toBeGreaterThanOrEqual(0);
       expect(r.batch).toBeLessThanOrEqual(r.need);
+      expect(r.draftBatch).toBeGreaterThanOrEqual(0);
+      expect(r.draftBatch).toBeLessThanOrEqual(batchSizeDrafts);
     }
   });
 });

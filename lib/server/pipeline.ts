@@ -50,6 +50,8 @@ export type FounderPipeline = {
   targetMonth: IsoMonth;
   targetPast: boolean;
   candidateTargetMax: number;
+  /** Selected concepts of the target month with no live draft. */
+  selectedWaiting: number;
   replenishment: Replenishment;
 };
 
@@ -126,6 +128,7 @@ export async function loadPipeline(period: PipelinePeriod, founderId?: string): 
         targetMonth,
         targetPast,
         candidateTargetMax,
+        selectedWaiting: supply.selected_waiting,
         replenishment: replenishment({
           candidateTargetMax,
           conceptsOpen: supply.concepts_open,
@@ -134,6 +137,8 @@ export async function loadPipeline(period: PipelinePeriod, founderId?: string): 
           scheduled: supply.scheduled_in_month,
           // A month that has passed is never replenished.
           batchSize: targetPast ? 0 : supply.batch_size,
+          selectedWaiting: supply.selected_waiting,
+          batchSizeDrafts: targetPast ? 0 : supply.batch_size_drafts,
         }),
       };
     }),
@@ -170,4 +175,16 @@ function toCoverage(row: SqlCoverage, targets: MonthTargets): Coverage {
       conceptsWaiting: row.concepts_waiting,
     },
   );
+}
+
+/** Matches the settings CHECK: drafts per top-up. */
+export const MAX_DRAFTS_PER_TOP_UP = 5;
+
+export type BatchSizes = { concepts: number; drafts: number };
+
+/** The company's top-up batch sizes. */
+export async function loadBatchSizes(): Promise<BatchSizes> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.from("settings").select("batch_size_concepts, batch_size_drafts").maybeSingle();
+  return { concepts: data?.batch_size_concepts ?? 5, drafts: data?.batch_size_drafts ?? 3 };
 }

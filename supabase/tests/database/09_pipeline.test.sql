@@ -190,18 +190,44 @@ select is((select next_open_slot from after_edit), '2026-11-10'::date, 'the free
 -- ===========================================================================
 select pg_temp.as_admin();
 select results_eq(
-  $$select concepts_open, drafts_in_progress, scheduled_in_month, batch_size
+  $$select concepts_open, drafts_in_progress, scheduled_in_month, selected_waiting, batch_size, batch_size_drafts
     from public.candidate_supply('00000000-0000-4000-8000-0000000000f1', '2026-11-01')$$,
-  -- In progress: admin, drafting, changes, review, and the edited draft.
-  $$values (2, 5, 0, 5)$$, 'unused concepts, drafts in progress, scheduled in the month, and the batch ceiling');
+  -- In progress: admin, drafting, changes, review, and the edited draft. Both unused concepts are selected.
+  $$values (2, 5, 0, 2, 5, 3)$$,
+  'unused concepts, drafts in progress, scheduled in the month, selected concepts waiting, and the batch ceilings');
 select results_eq(
-  $$select concepts_open, drafts_in_progress, scheduled_in_month from public.candidate_supply('00000000-0000-4000-8000-0000000000f1', '2027-01-01')$$,
-  $$values (0, 0, 1)$$, 'per target month');
+  $$select concepts_open, drafts_in_progress, scheduled_in_month, selected_waiting
+    from public.candidate_supply('00000000-0000-4000-8000-0000000000f1', '2027-01-01')$$,
+  $$values (0, 0, 1, 0)$$, 'per target month');
 select throws_ok($$select * from public.candidate_supply('00000000-0000-4000-8000-0000000000f1', '2026-11-02')$$, '22023',
   'choose a month', 'a month starts on the 1st');
 select throws_ok($$select * from public.coverage('00000000-0000-4000-8000-0000000000f1', '2026-11-01', '2026-11-01', '2026-10-27')$$,
   '22023', 'choose a period', 'an empty period is refused');
 reset role;
+
+-- ===========================================================================
+-- Batch sizes: the admin sets them, within bounds, audited
+-- ===========================================================================
+select pg_temp.as_admin();
+select lives_ok($$select public.set_batch_sizes(8, 2)$$, 'the admin sets the batch sizes');
+select results_eq($$select batch_size, batch_size_drafts from public.candidate_supply('00000000-0000-4000-8000-0000000000f1', '2026-11-01')$$,
+  $$values (8, 2)$$, 'replenishment uses them');
+select throws_ok($$select public.set_batch_sizes(11, 2)$$, '22023', 'concepts 1 to 10, drafts 1 to 5', 'at most one concept run');
+select throws_ok($$select public.set_batch_sizes(5, 6)$$, '22023', null, 'at most five drafts');
+select throws_ok($$select public.set_batch_sizes(0, 3)$$, '22023', null, 'at least one');
+reset role;
+select is((select count(*)::integer from public.audit_events where action = 'settings.batch_sizes'), 1, 'the change is audited once');
+set local role authenticated;
+select pg_temp.as_user('00000000-0000-4000-8000-0000000000c1', 'aal2');
+select throws_ok($$select public.set_batch_sizes(5, 3)$$, '42501', 'admin only', 'a founder cannot set them');
+select pg_temp.as_user('00000000-0000-4000-8000-0000000000a1', 'aal1');
+select throws_ok($$select public.set_batch_sizes(5, 3)$$, '42501', 'admin only', 'nor an admin without MFA');
+reset role;
+set local role anon;
+select throws_ok($$select public.set_batch_sizes(5, 3)$$, '42501', null, 'nor anonymous');
+reset role;
+select results_eq($$select batch_size_concepts::integer, batch_size_drafts::integer from public.settings$$, $$values (8, 2)$$,
+  'refused calls change nothing');
 
 -- ===========================================================================
 -- Admin-only and read-only (criterion 4)

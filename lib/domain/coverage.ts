@@ -194,6 +194,7 @@ export function isShortfall(usableBuffer: number, rule: BufferRule): boolean {
 // ---------------------------------------------------------------------------
 
 export const DEFAULT_BATCH_SIZE_CONCEPTS = 5;
+export const DEFAULT_BATCH_SIZE_DRAFTS = 3;
 
 export type ReplenishmentInput = {
   candidateTargetMax: number;
@@ -205,12 +206,25 @@ export type ReplenishmentInput = {
   /** Scheduled for the month. */
   scheduled: number;
   batchSize: number;
+  /** Selected concepts of the month with no live draft. */
+  selectedWaiting: number;
+  batchSizeDrafts: number;
 };
 
-export type Replenishment = { candidatesExisting: number; need: number; batch: number };
+/**
+ * A top-up: `batch` new concepts for the need, and `draftBatch` drafts written
+ * from concepts the admin already selected. New concepts are never drafted
+ * here: they arrive as proposals for the admin to select.
+ */
+export type Replenishment = { candidatesExisting: number; need: number; batch: number; draftBatch: number };
 
 export function replenishment(r: ReplenishmentInput): Replenishment {
   const candidatesExisting = r.conceptsOpen + r.draftsInProgress;
   const need = Math.max(0, r.candidateTargetMax - candidatesExisting - r.usableBuffer - r.scheduled);
-  return { candidatesExisting, need, batch: Math.max(0, Math.min(need, r.batchSize)) };
+  return {
+    candidatesExisting,
+    need,
+    batch: Math.max(0, Math.min(need, r.batchSize)),
+    draftBatch: Math.max(0, Math.min(r.selectedWaiting, r.batchSizeDrafts)),
+  };
 }

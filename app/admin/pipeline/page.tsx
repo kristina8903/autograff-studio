@@ -5,8 +5,15 @@ import { Badge, Card, PageHeader, cx } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth/dal";
 import { SHORT_HORIZON_DAYS, type CoverageStatus } from "@/lib/domain/coverage";
 import { addMonths, isIsoMonth, localToday, monthLabel, monthOf, shortDateLabel } from "@/lib/domain/dates";
-import { loadPipeline, periodMonths, type FounderPipeline } from "@/lib/server/pipeline";
-import { ReplenishForm } from "./pipeline-forms";
+import { MAX_CONCEPTS_PER_RUN } from "@/lib/prompts/concepts.v2";
+import {
+  MAX_DRAFTS_PER_TOP_UP,
+  loadBatchSizes,
+  loadPipeline,
+  periodMonths,
+  type FounderPipeline,
+} from "@/lib/server/pipeline";
+import { BatchSizesForm, ReplenishForm } from "./pipeline-forms";
 import { PipelineTabs } from "./pipeline-tabs";
 
 export const metadata: Metadata = { title: "Pipeline" };
@@ -25,7 +32,7 @@ export default async function PipelinePage({ searchParams }: PageProps<"/admin/p
   if (!isIsoMonth(month) || ![1, 2, 3].includes(span)) notFound();
   const period = { first: month, months: span };
   const months = periodMonths(period);
-  const pipelines = await loadPipeline(period);
+  const [pipelines, batchSizes] = await Promise.all([loadPipeline(period), loadBatchSizes()]);
   const periodName =
     months.length === 1 ? monthLabel(months[0]) : `${monthLabel(months[0])} – ${monthLabel(months.at(-1)!)}`;
   const href = (m: string, s: number) => `/admin/pipeline?month=${m}${s === 2 ? "" : `&span=${s}`}`;
@@ -132,6 +139,20 @@ export default async function PipelinePage({ searchParams }: PageProps<"/admin/p
           <FounderCard key={p.founder.id} p={p} periodName={periodName} month={month} />
         ))}
       </div>
+
+      <Card className="mt-6">
+        <h2 className="mb-1 text-sm font-semibold">Top-up batch sizes</h2>
+        <p className="mb-3 text-sm text-muted">
+          The most a top-up asks for, per founder: new concepts toward the month&apos;s candidate ceiling, and drafts of
+          concepts you have selected.
+        </p>
+        <BatchSizesForm
+          concepts={batchSizes.concepts}
+          drafts={batchSizes.drafts}
+          maxConcepts={MAX_CONCEPTS_PER_RUN}
+          maxDrafts={MAX_DRAFTS_PER_TOP_UP}
+        />
+      </Card>
     </>
   );
 }
@@ -234,21 +255,23 @@ function FounderCard({ p, periodName, month }: { p: FounderPipeline; periodName:
         </section>
 
         <section aria-label="Replenishment">
-          <h3 className="mb-2 text-sm font-semibold">Replenish {monthLabel(p.targetMonth)}</h3>
+          <h3 className="mb-2 text-sm font-semibold">Top up {monthLabel(p.targetMonth)}</h3>
           <dl className="mb-3 text-sm">
             <Row label="Candidate ceiling" hint="From the cadence">
               {p.candidateTargetMax}
             </Row>
             <Row label="Unused concepts and drafts in progress">{r.candidatesExisting}</Row>
-            <Row label="Need">{r.need}</Row>
+            <Row label="New concepts needed">{r.need}</Row>
+            <Row label="Selected concepts waiting for a draft">{p.selectedWaiting}</Row>
           </dl>
-          {r.batch > 0 ? (
+          {r.batch > 0 || r.draftBatch > 0 ? (
             <ReplenishForm
               founderId={p.founder.id}
               founderName={p.founder.displayName}
               month={p.targetMonth}
               monthName={monthLabel(p.targetMonth)}
-              batch={r.batch}
+              concepts={r.batch}
+              drafts={r.draftBatch}
               nonce={crypto.randomUUID()}
             />
           ) : p.targetPast ? (
@@ -258,13 +281,6 @@ function FounderCard({ p, periodName, month }: { p: FounderPipeline; periodName:
               Supply is sufficient for {monthLabel(p.targetMonth)}. Nothing to generate.
             </p>
           )}
-          {c.conceptsWaiting > 0 ? (
-            <p className="mt-3 text-sm">
-              <Link href={`/admin/concepts?month=${p.targetMonth}`} className="text-accent hover:underline">
-                Draft the {c.conceptsWaiting} selected concept{c.conceptsWaiting === 1 ? "" : "s"}
-              </Link>
-            </p>
-          ) : null}
         </section>
       </div>
     </Card>
