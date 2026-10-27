@@ -22,6 +22,7 @@ import {
   type ConceptRefs,
 } from "@/lib/server/generation/context";
 import { startRun } from "@/lib/server/generation/request";
+import { loadPipeline } from "@/lib/server/pipeline";
 import type { Json } from "@/lib/supabase/database.types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -161,4 +162,34 @@ export async function updateConceptAction(_state: ActionState, form: FormData): 
   if (error) return { error: "Not saved. Only proposed or selected concepts can be edited." };
   revalidatePath("/admin/concepts");
   return { message: "Saved." };
+}
+
+/**
+ * The pipeline's replenish action (DATA_MODEL §12.4), after the admin
+ * confirmed it. The batch is recomputed here, never taken from the form: it
+ * runs only while there is a need, and never asks for more than the batch.
+ */
+export async function replenishAction(_state: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const founderId = str(form, "founder_id");
+  const month = str(form, "month");
+  const confirmed = Number(form.get("count"));
+  if (!UUID.test(founderId) || !isIsoMonth(month)) return { error: "Choose a founder and month." };
+  const [pipeline] = await loadPipeline({ first: month, months: 1 }, founderId);
+  if (!pipeline || pipeline.targetMonth !== month || pipeline.targetPast)
+    return { error: "That month can't be replenished." };
+  const { batch } = pipeline.replenishment;
+  if (batch === 0) return { error: "Supply is already sufficient. Nothing was generated." };
+  if (!Number.isInteger(confirmed) || confirmed < 1 || confirmed > batch)
+    return { error: "The need changed since the page loaded. Reload and confirm again." };
+  const result = await requestRun({
+    kind: "concept_batch",
+    founderId,
+    month,
+    count: confirmed,
+    nonce: str(form, "nonce"),
+    replacing: null,
+  });
+  revalidatePath("/admin/pipeline");
+  return result;
 }

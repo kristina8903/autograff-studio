@@ -2003,6 +2003,7 @@ export type Database = {
           ai_monthly_budget_usd: number;
           ai_per_run_ceiling_usd: number;
           allowed_email_domains: string[];
+          batch_size_concepts: number;
           company_id: string;
           publications_become_examples: boolean;
           research_allowed_domains: string[];
@@ -2015,6 +2016,7 @@ export type Database = {
           ai_monthly_budget_usd?: number;
           ai_per_run_ceiling_usd?: number;
           allowed_email_domains?: string[];
+          batch_size_concepts?: number;
           company_id: string;
           publications_become_examples?: boolean;
           research_allowed_domains?: string[];
@@ -2026,6 +2028,7 @@ export type Database = {
           ai_monthly_budget_usd?: number;
           ai_per_run_ceiling_usd?: number;
           allowed_email_domains?: string[];
+          batch_size_concepts?: number;
           company_id?: string;
           publications_become_examples?: boolean;
           research_allowed_domains?: string[];
@@ -2314,6 +2317,15 @@ export type Database = {
       };
       approve_draft: { Args: { p_draft_id: string; p_note: string; p_version_id: string }; Returns: string };
       approved_text: { Args: { p_draft_id: string }; Returns: string };
+      candidate_supply: {
+        Args: { p_founder_id: string; p_month: string };
+        Returns: {
+          batch_size: number;
+          concepts_open: number;
+          drafts_in_progress: number;
+          scheduled_in_month: number;
+        }[];
+      };
       claim_generation_run: {
         Args: { p_run_id?: string };
         Returns: {
@@ -2369,6 +2381,41 @@ export type Database = {
       complete_research_run: {
         Args: { p_payload: Json; p_run_id: string; p_served_model: string; p_usage: Json };
         Returns: string;
+      };
+      coverage: {
+        Args: { p_founder_id: string; p_from: string; p_to: string; p_today: string };
+        Returns: {
+          approval_invalid: number;
+          approved_unscheduled: number;
+          concepts_waiting: number;
+          excluded: number;
+          external_drafts: number;
+          held_repeat: number;
+          in_admin_review: number;
+          in_founder_review: number;
+          next_open_slot: string;
+          published: number;
+          published_drafts: number;
+          scheduled: number;
+          scheduled_other_period: number;
+          slots_filled: number;
+          slots_open: number;
+          slots_required: number;
+          slots_reserved_timely: number;
+          slots_skipped: number;
+        }[];
+      };
+      coverage_draft_buckets: {
+        Args: { p_founder_id: string; p_from: string; p_to: string };
+        Returns: {
+          bucket: string;
+          draft_id: string;
+          is_external: boolean;
+          repeats_published: boolean;
+          scheduled_on: string;
+          status: Database["public"]["Enums"]["draft_status"];
+          valid_approval: boolean;
+        }[];
       };
       coverage_slot_counts: {
         Args: { p_founder_id: string; p_month: string };

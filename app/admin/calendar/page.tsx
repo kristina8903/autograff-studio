@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Badge, Card, PageHeader, cx } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth/dal";
 import { monthTargets } from "@/lib/domain/cadence";
-import { coverage } from "@/lib/domain/coverage";
+import { countSlots } from "@/lib/domain/coverage";
 import {
   WEEKDAY_NAMES,
   addDays,
@@ -12,12 +12,14 @@ import {
   firstDayOfMonth,
   isIsoMonth,
   lastDayOfMonth,
+  localDateTime,
   localToday,
   monthLabel,
   monthOf,
   shortDateLabel,
   startOfIsoWeek,
 } from "@/lib/domain/dates";
+import { loadPipeline } from "@/lib/server/pipeline";
 import { toCadenceRule } from "@/lib/server/planning";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AddSlotForm, PlanMonthForm, SlotActions } from "./calendar-forms";
@@ -36,6 +38,28 @@ const FOUNDER_COLORS = [
 
 const KIND_LABEL = { regular: "Planned", reserved_timely: "Kept for news", manual: "Added" } as const;
 
+const COVERAGE_LABEL = { covered: "Covered", at_risk: "At risk", short: "Short" } as const;
+const COVERAGE_TONE = { covered: "success", at_risk: "accent", short: "danger" } as const;
+
+// What the calendar can be narrowed to.
+const SHOW = {
+  all: "Everything",
+  open: "Open",
+  scheduled: "Scheduled",
+  published: "Published",
+  news: "Kept for news",
+  skipped: "Skipped",
+} as const;
+type Show = keyof typeof SHOW;
+type Entry = Exclude<Show, "all">;
+
+/** A slot's state, for the filter. */
+function slotEntry(slot: { kind: string; status: string; draft: { status: string } | null }): Entry {
+  if (slot.status === "skipped") return "skipped";
+  if (slot.draft) return slot.draft.status === "published" ? "published" : "scheduled";
+  return slot.kind === "reserved_timely" ? "news" : "open";
+}
+
 export default async function CalendarPage({ searchParams }: PageProps<"/admin/calendar">) {
   await requireAdmin();
   const params = await searchParams;
@@ -43,9 +67,21 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
   const month = typeof params.month === "string" ? params.month : monthOf(today);
   if (!isIsoMonth(month)) notFound();
   const only = typeof params.founder === "string" ? params.founder : "all";
+  const show: Show =
+    typeof params.show === "string" && Object.hasOwn(SHOW, params.show) ? (params.show as Show) : "all";
+  // A day either side, so every founder's local month is covered; filtered by local date below.
+  const rangeFrom = `${addDays(firstDayOfMonth(month), -1)}T00:00:00Z`;
+  const rangeTo = `${addDays(lastDayOfMonth(month), 2)}T00:00:00Z`;
 
   const supabase = await createSupabaseServerClient();
-  const [{ data: founderRows }, { data: ruleRows }, { data: slotRows }] = await Promise.all([
+  const [
+    { data: founderRows },
+    { data: ruleRows },
+    { data: slotRows },
+    { data: scheduledRows },
+    { data: publicationRows },
+    pipelines,
+  ] = await Promise.all([
     supabase.from("founders").select("id, display_name, role_title, timezone").eq("active", true).order("created_at"),
     supabase.from("cadence_rules").select("*"),
     supabase
@@ -55,6 +91,18 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
       .lte("slot_date", lastDayOfMonth(month))
       .order("slot_date")
       .order("ordinal"),
+    supabase
+      .from("drafts")
+      .select("id, founder_id, scheduled_for, concept:concepts(title)")
+      .eq("status", "scheduled")
+      .gte("scheduled_for", rangeFrom)
+      .lt("scheduled_for", rangeTo),
+    supabase
+      .from("publications")
+      .select("id, founder_id, draft_id, is_external, published_at, linkedin_url")
+      .gte("published_at", rangeFrom)
+      .lt("published_at", rangeTo),
+    loadPipeline({ first: month, months: 1 }),
   ]);
   const founders = (founderRows ?? []).map((f, index) => ({
     ...f,
@@ -62,7 +110,37 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
   }));
   const byId = Object.fromEntries(founders.map((f) => [f.id, f]));
   const shown = only === "all" ? founders : founders.filter((f) => f.id === only);
-  const slots = (slotRows ?? []).filter((s) => byId[s.founder_id] && (only === "all" || s.founder_id === only));
+  const forFounder = (founderId: string) => byId[founderId] && (only === "all" || founderId === only);
+  const slots = (slotRows ?? []).filter((s) => forFounder(s.founder_id) && (show === "all" || slotEntry(s) === show));
+  // Posts scheduled or published outside any slot of the month, on their founder's local date.
+  const inSlots = new Set((slotRows ?? []).map((s) => s.draft?.id).filter(Boolean));
+  const localDate = (founderId: string, at: string) =>
+    localDateTime(byId[founderId].timezone, new Date(at)).slice(0, 10);
+  const loose = [
+    ...(scheduledRows ?? [])
+      .filter((d) => byId[d.founder_id] && !inSlots.has(d.id))
+      .map((d) => ({
+        key: `d-${d.id}`,
+        founderId: d.founder_id,
+        date: localDate(d.founder_id, d.scheduled_for!),
+        entry: "scheduled" as Entry,
+        label: "scheduled",
+        href: `/admin/drafts/${d.id}`,
+        title: d.concept?.title ?? "Draft",
+      })),
+    ...(publicationRows ?? [])
+      .filter((p) => byId[p.founder_id] && !(p.draft_id && inSlots.has(p.draft_id)))
+      .map((p) => ({
+        key: `p-${p.id}`,
+        founderId: p.founder_id,
+        date: localDate(p.founder_id, p.published_at),
+        entry: "published" as Entry,
+        label: p.is_external ? "external post" : "published",
+        href: p.draft_id ? `/admin/drafts/${p.draft_id}` : p.linkedin_url,
+        title: p.is_external ? "Posted outside the studio" : "Published",
+      })),
+  ].filter((e) => monthOf(e.date) === month && forFounder(e.founderId) && (show === "all" || e.entry === show));
+  const pipelineOf = Object.fromEntries(pipelines.map((p) => [p.founder.id, p]));
 
   // Month grid, Monday-first.
   const start = startOfIsoWeek(firstDayOfMonth(month));
@@ -70,8 +148,8 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
   for (let week = start; week <= lastDayOfMonth(month); week = addDays(week, 7)) {
     weeks.push(Array.from({ length: 7 }, (_, i) => addDays(week, i)));
   }
-  const filterHref = (founder: string) =>
-    `/admin/calendar?month=${month}${founder === "all" ? "" : `&founder=${founder}`}`;
+  const filterHref = (founder: string, state: Show) =>
+    `/admin/calendar?month=${month}${founder === "all" ? "" : `&founder=${founder}`}${state === "all" ? "" : `&show=${state}`}`;
 
   return (
     <>
@@ -108,17 +186,15 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
               <th className="px-4 py-2 font-medium">Planned</th>
               <th className="px-4 py-2 font-medium">Kept for news</th>
               <th className="px-4 py-2 font-medium">Skipped</th>
-              <th className="px-4 py-2 font-medium">Content ready</th>
+              <th className="px-4 py-2 font-medium">Coverage</th>
             </tr>
           </thead>
           <tbody>
             {founders.map((f) => {
               const rules = (ruleRows ?? []).filter((r) => r.founder_id === f.id).map(toCadenceRule);
               const targets = monthTargets(rules, month);
-              const c = coverage(
-                (slotRows ?? []).filter((s) => s.founder_id === f.id),
-                targets,
-              );
+              const c = countSlots((slotRows ?? []).filter((s) => s.founder_id === f.id));
+              const pipeline = pipelineOf[f.id];
               return (
                 <tr key={f.id} className="border-b border-border last:border-0">
                   <td className="px-4 py-3">
@@ -142,7 +218,20 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
                   <td className="px-4 py-3">{c.required}</td>
                   <td className="px-4 py-3">{c.reservedTimely}</td>
                   <td className="px-4 py-3">{c.skipped}</td>
-                  <td className="px-4 py-3 text-muted">Pipeline view in Phase 8</td>
+                  <td className="px-4 py-3">
+                    {pipeline ? (
+                      <Link
+                        href={`/admin/pipeline?month=${month}&span=1#founder-${f.id}`}
+                        className="flex flex-wrap items-center gap-1 hover:underline"
+                      >
+                        <Badge tone={COVERAGE_TONE[pipeline.status]}>{COVERAGE_LABEL[pipeline.status]}</Badge>
+                        <span className="text-xs text-muted">
+                          {pipeline.coverage.published + pipeline.coverage.scheduled} published or scheduled ·{" "}
+                          {pipeline.coverage.usableBuffer} in hand
+                        </span>
+                      </Link>
+                    ) : null}
+                  </td>
                 </tr>
               );
             })}
@@ -151,24 +240,44 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
       </Card>
 
       <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-        <nav aria-label="Filter by founder" className="flex flex-wrap gap-2 text-sm">
-          {[{ id: "all", label: "Everyone" }, ...founders.map((f) => ({ id: f.id, label: f.role_title }))].map(
-            (item) => (
+        <div className="space-y-2">
+          <nav aria-label="Filter by founder" className="flex flex-wrap gap-2 text-sm">
+            {[{ id: "all", label: "Everyone" }, ...founders.map((f) => ({ id: f.id, label: f.role_title }))].map(
+              (item) => (
+                <Link
+                  key={item.id}
+                  href={filterHref(item.id, show)}
+                  aria-current={only === item.id ? "page" : undefined}
+                  className={cx(
+                    "rounded-full border px-3 py-1",
+                    only === item.id
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-border text-muted hover:text-foreground",
+                  )}
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
+          </nav>
+          <nav aria-label="Filter by state" className="flex flex-wrap gap-2 text-sm">
+            {(Object.keys(SHOW) as Show[]).map((state) => (
               <Link
-                key={item.id}
-                href={filterHref(item.id)}
+                key={state}
+                href={filterHref(only, state)}
+                aria-current={show === state ? "page" : undefined}
                 className={cx(
                   "rounded-full border px-3 py-1",
-                  only === item.id
+                  show === state
                     ? "border-accent bg-accent/10 text-accent"
                     : "border-border text-muted hover:text-foreground",
                 )}
               >
-                {item.label}
+                {SHOW[state]}
               </Link>
-            ),
-          )}
-        </nav>
+            ))}
+          </nav>
+        </div>
         <PlanMonthForm month={month} label={monthLabel(month)} />
       </div>
 
@@ -189,6 +298,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
                 {week.map((day) => {
                   const inMonth = monthOf(day) === month;
                   const daySlots = slots.filter((s) => s.slot_date === day);
+                  const dayLoose = loose.filter((e) => e.date === day);
                   return (
                     <td key={day} className={cx("h-20 px-2 py-1.5", !inMonth && "bg-background/60")}>
                       <span
@@ -216,6 +326,19 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
                             {s.kind === "reserved_timely" ? " · news" : s.kind === "manual" ? " · added" : ""}
                             {s.draft ? ` · ${s.draft.status === "published" ? "published" : "scheduled"}` : ""}
                           </span>
+                        ))}
+                        {dayLoose.map((e) => (
+                          <Link
+                            key={e.key}
+                            href={e.href}
+                            title={`${byId[e.founderId].display_name}: ${e.title}, not in a slot`}
+                            className={cx(
+                              "truncate rounded px-1.5 py-0.5 text-xs hover:underline",
+                              byId[e.founderId].color,
+                            )}
+                          >
+                            {byId[e.founderId].role_title} · {e.label}
+                          </Link>
                         ))}
                       </div>
                     </td>
@@ -277,7 +400,9 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
             {slots.length ? null : (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-muted">
-                  No slots this month yet. Use “Plan slots” to create them from each founder&apos;s cadence.
+                  {show === "all"
+                    ? "No slots this month yet. Use “Plan slots” to create them from each founder’s cadence."
+                    : "No slots match this filter."}
                 </td>
               </tr>
             )}
