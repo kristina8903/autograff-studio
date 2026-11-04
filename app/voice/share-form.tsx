@@ -1,13 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
 import { Alert, Button, Field, Textarea } from "@/components/ui";
 import { shareExampleAction, type ActionState } from "./actions";
 
 export function ShareExampleForm() {
-  const [state, action, pending] = useActionState<ActionState, FormData>(shareExampleAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(shareExampleAction, {});
   return (
-    <form action={action} className="space-y-3">
+    <form ref={formRef} action={action} className="space-y-3">
       <Field label="Something you wrote" hint="A post, a note or an email you're happy to have used as an example.">
         <Textarea name="body" rows={5} required maxLength={10000} />
       </Field>

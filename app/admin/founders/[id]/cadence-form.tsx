@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
+import { useState } from "react";
 import { Alert, Button, Field, Input, Select } from "@/components/ui";
 import { CADENCE_PRESETS } from "@/lib/domain/cadence";
 import { WEEKDAY_NAMES } from "@/lib/domain/dates";
@@ -28,7 +29,7 @@ export function CadenceForm({
   today: string;
   defaults: CadenceDefaults;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(setCadence, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(setCadence, {});
   const [values, setValues] = useState(defaults);
   // Bumped only by the preset buttons, to reset the uncontrolled fields to the preset.
   const [presetVersion, setPresetVersion] = useState(0);
@@ -51,7 +52,7 @@ export function CadenceForm({
   }
 
   return (
-    <form action={action} className="space-y-4" key={presetVersion}>
+    <form ref={formRef} action={action} className="space-y-4" key={presetVersion}>
       <input type="hidden" name="founder_id" value={founderId} />
       <div className="flex flex-wrap gap-2 text-sm">
         <span className="text-muted">Presets:</span>

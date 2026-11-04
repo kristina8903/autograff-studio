@@ -54,6 +54,29 @@ test("saving a brief creates a new version and earlier versions stay readable", 
   await expect(changes).toContainText("Pricing debates");
 });
 
+test("a refused brief save keeps everything typed and says exactly what to fix", async () => {
+  await admin.goto("/admin/briefs/2026-11");
+  const facts = Array.from({ length: 31 }, (_, i) => `Approved fact ${i + 1}`).join("\n");
+  await admin.getByLabel("Theme", { exact: true }).fill("Kept theme");
+  await admin.getByLabel("Business objectives").fill("Kept objective one\nKept objective two");
+  await admin.getByLabel("Approved facts and messaging").fill(facts);
+  await admin.getByLabel("What changed").fill("Kept note");
+  await admin.getByRole("button", { name: "Save as version 3" }).click();
+
+  await expect(admin.getByText("Check the highlighted fields.")).toBeVisible();
+  await expect(admin.getByText("This has 31 lines; the limit is 30.", { exact: false })).toBeVisible();
+  await expect(admin.getByLabel("Theme", { exact: true })).toHaveValue("Kept theme");
+  await expect(admin.getByLabel("Business objectives")).toHaveValue("Kept objective one\nKept objective two");
+  await expect(admin.getByLabel("Approved facts and messaging")).toHaveValue(facts);
+  await expect(admin.getByLabel("What changed")).toHaveValue("Kept note");
+
+  // Fixing the one field is enough: nothing has to be typed again.
+  await admin.getByLabel("Approved facts and messaging").fill("Approved fact 1\nApproved fact 2");
+  await admin.getByRole("button", { name: "Save as version 3" }).click();
+  await expect(admin.getByText("Saved as version 3.")).toBeVisible();
+  await expect(admin.getByLabel("Theme", { exact: true })).toHaveValue("Kept theme");
+});
+
 test("each founder's cadence shows the slots it requires", async () => {
   await admin.goto(`/admin/founders/${CEO_FOUNDER}`);
   await expect(admin.getByText("2–3 posts a week on Tue, Wed, Thu")).toBeVisible();

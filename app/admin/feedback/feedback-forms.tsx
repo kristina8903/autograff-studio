@@ -1,16 +1,17 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
+import { useState } from "react";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { FEEDBACK_KIND_LABELS } from "@/lib/domain/feedback";
 import { POST_FORMATS } from "@/lib/domain/formats";
 import { addFeedbackAction, reviewFeedbackAction, type ActionState } from "../voice-actions";
 
 export function AddFeedbackForm({ founders }: { founders: { id: string; label: string }[] }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(addFeedbackAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(addFeedbackAction, {});
   const [kind, setKind] = useState("stable_preference");
   return (
-    <form action={action} className="space-y-3">
+    <form ref={formRef} action={action} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-3">
         <Field label="Founder">
           <Select name="founder_id" required>
@@ -55,9 +56,9 @@ export function AddFeedbackForm({ founders }: { founders: { id: string; label: s
 }
 
 export function ReviewFeedbackForm({ signalId, canAccept }: { signalId: string; canAccept: boolean }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(reviewFeedbackAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(reviewFeedbackAction, {});
   return (
-    <form action={action} className="flex flex-wrap items-center justify-end gap-2">
+    <form ref={formRef} action={action} className="flex flex-wrap items-center justify-end gap-2">
       <input type="hidden" name="signal_id" value={signalId} />
       <Input name="note" placeholder="Note (optional)" maxLength={500} aria-label="Note" className="h-8 w-44 text-xs" />
       {canAccept ? (

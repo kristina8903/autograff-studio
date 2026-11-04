@@ -38,6 +38,25 @@ describe("parseBriefForm", () => {
     if (!result.ok) expect(result.errors.theme).toBe("Enter the month's theme.");
   });
 
+  it("says which limit a list field broke, and where", () => {
+    const many = Array.from({ length: 42 }, (_, i) => `Fact ${i + 1}`).join("\n");
+    const tooMany = parseBriefForm(form({ theme: "T", approvedFacts: many, objectives: many }), []);
+    expect(tooMany.ok).toBe(false);
+    if (!tooMany.ok) {
+      expect(tooMany.errors.approvedFacts).toMatch(/^This has 42 lines; the limit is 30\./);
+      expect(tooMany.errors.objectives).toMatch(/^This has 42 lines; the limit is 30\./);
+    }
+
+    const long = parseBriefForm(form({ theme: "T", approvedFacts: `Short\n${"x".repeat(1240)}` }), []);
+    expect(long.ok).toBe(false);
+    if (!long.ok)
+      expect(long.errors.approvedFacts).toMatch(/^Line 2 is 1,240 characters; each line can be up to 1,000\./);
+
+    // Blank lines don't count, and the limits themselves are allowed.
+    const atLimit = Array.from({ length: 30 }, () => "y".repeat(1000)).join("\n\n");
+    expect(parseBriefForm(form({ theme: "T", approvedFacts: atLimit }), []).ok).toBe(true);
+  });
+
   it("ignores emphasis for founders it was not told about", () => {
     const result = parseBriefForm(form({ theme: "T", [`emphasis:${cto}`]: "x" }), [ceo]);
     expect(result.ok && result.data.founderEmphasis).toEqual({});

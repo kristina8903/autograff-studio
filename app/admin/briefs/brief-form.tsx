@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
 import { Alert, Button, Field, Input, Textarea } from "@/components/ui";
 import { LIST_FIELDS, type BriefSnapshot } from "@/lib/domain/briefs";
 import { saveBrief, type ActionState } from "../planning-actions";
@@ -18,10 +18,10 @@ export function BriefForm({
   founders: { id: string; label: string }[];
   nextVersion: number;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(saveBrief, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(saveBrief, {});
   const errors = state.errors ?? {};
   return (
-    <form action={action} className="space-y-5">
+    <form ref={formRef} action={action} className="space-y-5">
       <input type="hidden" name="month" value={month} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Theme" error={errors.theme}>

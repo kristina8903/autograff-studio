@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
+import { useState } from "react";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { POST_FORMATS } from "@/lib/domain/formats";
 import {
@@ -32,9 +33,9 @@ export function GenerateForm({
   max: number;
   nonce: string;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(requestConceptsAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(requestConceptsAction, {});
   return (
-    <form action={action} className="flex flex-wrap items-end gap-3">
+    <form ref={formRef} action={action} className="flex flex-wrap items-end gap-3">
       <input type="hidden" name="founder_id" value={founderId} />
       <input type="hidden" name="month" value={month} />
       <input type="hidden" name="nonce" value={nonce} />
@@ -58,14 +59,14 @@ export function GenerateForm({
 }
 
 export function StatusButtons({ conceptId, status }: { conceptId: string; status: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(setConceptStatusAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(setConceptStatusAction, {});
   const button = (to: string, label: string, variant: "primary" | "secondary" | "danger" = "secondary") => (
     <Button name="status" value={to} variant={variant} disabled={pending} className="h-8 px-2 text-xs">
       {label}
     </Button>
   );
   return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
+    <form ref={formRef} action={action} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="concept_id" value={conceptId} />
       {status === "proposed" ? (
         <>
@@ -86,7 +87,7 @@ export function StatusButtons({ conceptId, status }: { conceptId: string; status
 }
 
 export function RegenerateForm({ conceptId, nonce }: { conceptId: string; nonce: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(regenerateConceptAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(regenerateConceptAction, {});
   const [open, setOpen] = useState(false);
   if (!open)
     return (
@@ -95,7 +96,7 @@ export function RegenerateForm({ conceptId, nonce }: { conceptId: string; nonce:
       </Button>
     );
   return (
-    <form action={action} className="flex w-full flex-wrap items-end gap-2">
+    <form ref={formRef} action={action} className="flex w-full flex-wrap items-end gap-2">
       <input type="hidden" name="concept_id" value={conceptId} />
       <input type="hidden" name="nonce" value={nonce} />
       <Field label="What should be different? (optional)">
@@ -128,7 +129,7 @@ export function EditConceptForm({
     evidence_requirements: string[];
   };
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(updateConceptAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(updateConceptAction, {});
   const [open, setOpen] = useState(false);
   if (!open)
     return (
@@ -137,7 +138,7 @@ export function EditConceptForm({
       </Button>
     );
   return (
-    <form action={action} className="w-full space-y-3 rounded-md border border-border p-3">
+    <form ref={formRef} action={action} className="w-full space-y-3 rounded-md border border-border p-3">
       <input type="hidden" name="concept_id" value={concept.id} />
       <Field label="Title">
         <Input name="title" defaultValue={concept.title} maxLength={200} required />

@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
+import { useState } from "react";
 import { Alert, Button, Field, Input } from "@/components/ui";
 import { replenishAction, setBatchSizesAction, type ActionState } from "../concept-actions";
 
@@ -28,7 +29,7 @@ export function ReplenishForm({
   drafts: number;
   nonce: string;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(replenishAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(replenishAction, {});
   const [confirming, setConfirming] = useState(false);
   if (state.message) return <Alert tone="success">{state.message}</Alert>;
   const parts = [
@@ -38,7 +39,7 @@ export function ReplenishForm({
   return (
     <div className="space-y-2">
       {confirming ? (
-        <form action={action} className="space-y-2 rounded-md border border-border p-3">
+        <form ref={formRef} action={action} className="space-y-2 rounded-md border border-border p-3">
           <input type="hidden" name="founder_id" value={founderId} />
           <input type="hidden" name="month" value={month} />
           <input type="hidden" name="concepts" value={concepts} />
@@ -85,9 +86,9 @@ export function BatchSizesForm({
   maxConcepts: number;
   maxDrafts: number;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(setBatchSizesAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(setBatchSizesAction, {});
   return (
-    <form action={action} className="flex flex-wrap items-end gap-3" aria-label="Top-up batch sizes">
+    <form ref={formRef} action={action} className="flex flex-wrap items-end gap-3" aria-label="Top-up batch sizes">
       <Field label="New concepts per top-up" hint={`1 to ${maxConcepts}`}>
         <Input
           name="concepts"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { POST_FORMATS } from "@/lib/domain/formats";
 import { addExampleAction, bulkAddExamplesAction, updateExampleAction, type ActionState } from "../../../voice-actions";
@@ -27,9 +27,9 @@ function Result({ state }: { state: ActionState }) {
 }
 
 export function AddExampleForm({ founderId }: { founderId: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(addExampleAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(addExampleAction, {});
   return (
-    <form action={action} className="space-y-3">
+    <form ref={formRef} action={action} className="space-y-3">
       <input type="hidden" name="founder_id" value={founderId} />
       <Field label="Post text">
         <Textarea name="body" rows={5} required maxLength={10000} />
@@ -65,9 +65,9 @@ export function AddExampleForm({ founderId }: { founderId: string }) {
 }
 
 export function BulkAddForm({ founderId }: { founderId: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(bulkAddExamplesAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(bulkAddExamplesAction, {});
   return (
-    <form action={action} className="space-y-3">
+    <form ref={formRef} action={action} className="space-y-3">
       <input type="hidden" name="founder_id" value={founderId} />
       <Field
         label="Posts"
@@ -104,9 +104,9 @@ export function ExampleSettings({
   founderId: string;
   example: { id: string; approved_for_voice: boolean; eval_holdout: boolean; format: string | null; topics: string[] };
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(updateExampleAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(updateExampleAction, {});
   return (
-    <form action={action} className="flex flex-wrap items-end gap-3 text-sm">
+    <form ref={formRef} action={action} className="flex flex-wrap items-end gap-3 text-sm">
       <input type="hidden" name="founder_id" value={founderId} />
       <input type="hidden" name="example_id" value={example.id} />
       <label className="flex items-center gap-1.5">

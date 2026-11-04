@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
 import { Alert, Button, Field, Input, Select } from "@/components/ui";
 import { COMMON_TIME_ZONES } from "@/lib/domain/founders";
 import {
@@ -21,13 +21,13 @@ type FounderValues = {
 };
 
 export function FounderForm({ founder, allTimeZones }: { founder?: FounderValues; allTimeZones: string[] }) {
-  const [state, action, pending] = useActionState<FounderFormState, FormData>(
+  const [state, action, pending, formRef] = useKeptActionState<FounderFormState>(
     founder?.id ? updateFounder : createFounder,
     {},
   );
   const zones = [...COMMON_TIME_ZONES, ...allTimeZones.filter((zone) => !COMMON_TIME_ZONES.includes(zone))];
   return (
-    <form action={action} className="space-y-4">
+    <form ref={formRef} action={action} className="space-y-4">
       {founder?.id ? <input type="hidden" name="id" value={founder.id} /> : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Name" error={state.errors?.display_name}>
@@ -64,10 +64,10 @@ export function FounderForm({ founder, allTimeZones }: { founder?: FounderValues
 }
 
 export function InviteForm({ founderId, domains }: { founderId: string; domains: string[] }) {
-  const [state, action, pending] = useActionState<SimpleState, FormData>(inviteFounderAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<SimpleState>(inviteFounderAction, {});
   if (state.ok) return <Alert tone="success">Invitation sent. The link in it expires after one hour.</Alert>;
   return (
-    <form action={action} className="space-y-4">
+    <form ref={formRef} action={action} className="space-y-4">
       <input type="hidden" name="founder_id" value={founderId} />
       <Field label="Work email" hint={`Only ${domains.map((d) => "@" + d).join(", ")} addresses can be invited.`}>
         <Input name="email" type="email" required placeholder={`name@${domains[0] ?? "autograff.ai"}`} />
@@ -81,9 +81,10 @@ export function InviteForm({ founderId, domains }: { founderId: string; domains:
 }
 
 export function DeactivateButton({ userId, label }: { userId: string; label: string }) {
-  const [state, action, pending] = useActionState<SimpleState, FormData>(deactivateUserAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<SimpleState>(deactivateUserAction, {});
   return (
     <form
+      ref={formRef}
       action={action}
       onSubmit={(event) => {
         if (!window.confirm(`Deactivate ${label}? They lose access immediately.`)) event.preventDefault();
