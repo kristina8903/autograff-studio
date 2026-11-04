@@ -4,7 +4,7 @@
 import { z } from "zod";
 
 export const MAX_LIST_ITEMS = 30;
-export const MAX_ITEM_LENGTH = 1000;
+export const MAX_ITEM_LENGTH = 2000;
 
 const item = z.string().trim().min(1).max(MAX_ITEM_LENGTH);
 // Missing lists read as empty, so older stored versions still parse.
