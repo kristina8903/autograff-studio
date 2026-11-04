@@ -49,7 +49,8 @@ test("research stores each source with its dates and excerpt; injected text chan
     "https://www.fleetresearch.example.org/2026-repair-report?utm_source=search",
   );
   await expect(report).toContainText("fleetresearch.example.org · Published or updated: March 4, 2026");
-  await expect(report).toContainText("Retrieved: October");
+  // Retrieved is the day the test runs, so match the date format, not a month.
+  await expect(report).toContainText(/Retrieved: [A-Z][a-z]+ \d{1,2}, \d{4}/);
   await expect(report).toContainText("About 27% of delays came from waiting for approvals");
   await expect(report).toContainText("Event date: 2025");
   // A page without a date says so.

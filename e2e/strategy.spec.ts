@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { generateSlots, monthTargets, type CadenceRule } from "../lib/domain/cadence";
 import { addMonths, localToday, monthLabel, monthOf } from "../lib/domain/dates";
-import { resetDatabase, signInAdmin, signInWithCode } from "./helpers";
+import { resetDatabase, openFromMenu, signInAdmin, signInWithCode } from "./helpers";
 
 // Phase 2 acceptance criteria (docs/PHASES.md) as one ordered story.
 test.describe.configure({ mode: "serial" });
@@ -34,7 +34,7 @@ test.beforeAll(async ({ browser }) => {
 });
 
 test("saving a brief creates a new version and earlier versions stay readable", async () => {
-  await admin.getByRole("link", { name: "Briefs" }).click();
+  await openFromMenu(admin, "Plan", "Briefs");
   await admin.getByRole("table", { name: "Briefs" }).getByRole("link", { name: "November 2026" }).click();
   await expect(admin.getByText("Current version: v1.")).toBeVisible();
   await admin.getByLabel("Theme", { exact: true }).fill("Operational uncertainty, sharpened");

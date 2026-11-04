@@ -1,5 +1,13 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { SUPABASE_URL, accessTokenFrom, freshTotp, latestEmail, resetDatabase, signInWithCode } from "./helpers";
+import {
+  SUPABASE_URL,
+  accessTokenFrom,
+  openFromMenu,
+  freshTotp,
+  latestEmail,
+  resetDatabase,
+  signInWithCode,
+} from "./helpers";
 
 // Phase 1 acceptance criteria (docs/PHASES.md) as one ordered story.
 test.describe.configure({ mode: "serial" });
@@ -80,6 +88,34 @@ test("an admin must enroll an authenticator before reaching admin pages", async 
   for (const name of ["Local CEO", "Local CTO", "Local COO"]) {
     await expect(adminPage.getByRole("link", { name, exact: true })).toBeVisible();
   }
+});
+
+test("the admin menu groups every admin page, and closes on Escape and after navigating", async () => {
+  const nav = adminPage.getByRole("navigation", { name: "Main" });
+  const groups = {
+    Plan: ["Briefs", "Calendar", "Pipeline"],
+    Create: ["Research", "Concepts", "Drafts"],
+    Publish: ["Publications", "Reports"],
+    Setup: ["Founders & team", "Voice", "Feedback", "AI usage"],
+  };
+  for (const [group, pages] of Object.entries(groups)) {
+    const button = nav.getByRole("button", { name: group });
+    await button.click();
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    for (const label of pages) await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
+    await adminPage.keyboard.press("Escape");
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    await expect(nav.getByRole("link")).toHaveCount(0);
+  }
+
+  await openFromMenu(adminPage, "Setup", "AI usage");
+  await expect(adminPage).toHaveURL(/\/admin\/ai$/);
+  await expect(adminPage.getByRole("heading", { name: "AI usage" })).toBeVisible();
+  await expect(nav.getByRole("link")).toHaveCount(0);
+  await nav.getByRole("button", { name: "Setup" }).click();
+  await expect(nav.getByRole("link", { name: "AI usage", exact: true })).toHaveAttribute("aria-current", "page");
+  await nav.getByRole("link", { name: "Founders & team", exact: true }).click();
+  await expect(adminPage).toHaveURL(/\/admin$/);
 });
 
 test("only company addresses can be invited", async () => {

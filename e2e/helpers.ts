@@ -118,3 +118,10 @@ export async function signInAdmin(page: Page, email: string, mfa: { secret: stri
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page).toHaveURL(/\/admin$/);
 }
+
+/** Follows a link in the admin's grouped menu: opens the group, then clicks the page. */
+export async function openFromMenu(page: Page, group: string, label: string) {
+  const nav = page.getByRole("navigation", { name: "Main" });
+  await nav.getByRole("button", { name: group }).click();
+  await nav.getByRole("link", { name: label, exact: true }).click();
+}
