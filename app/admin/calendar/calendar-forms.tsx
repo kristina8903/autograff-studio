@@ -1,13 +1,14 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
+import { useState } from "react";
 import { Alert, Button, Field, Input, Select } from "@/components/ui";
 import { addSlotAction, planMonthAction, updateSlotAction, type ActionState } from "../planning-actions";
 
 export function PlanMonthForm({ month, label }: { month: string; label: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(planMonthAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(planMonthAction, {});
   return (
-    <form action={action} className="space-y-2">
+    <form ref={formRef} action={action} className="space-y-2">
       <input type="hidden" name="month" value={month} />
       <Button type="submit" disabled={pending}>
         {pending ? "Planning…" : `Plan slots for ${label}`}
@@ -19,9 +20,9 @@ export function PlanMonthForm({ month, label }: { month: string; label: string }
 }
 
 export function AddSlotForm({ founders, minDate }: { founders: { id: string; label: string }[]; minDate: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(addSlotAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(addSlotAction, {});
   return (
-    <form action={action} className="flex flex-wrap items-end gap-3">
+    <form ref={formRef} action={action} className="flex flex-wrap items-end gap-3">
       <Field label="Founder">
         <Select name="founder_id" required className="w-48">
           {founders.map((f) => (
@@ -56,11 +57,11 @@ export function SlotActions({
   kind: "regular" | "reserved_timely" | "manual";
   minDate: string;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(updateSlotAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(updateSlotAction, {});
   const [moving, setMoving] = useState(false);
   if (status === "filled") return <span className="text-xs text-muted">Filled</span>;
   return (
-    <form action={action} className="flex flex-wrap items-center justify-end gap-2">
+    <form ref={formRef} action={action} className="flex flex-wrap items-center justify-end gap-2">
       <input type="hidden" name="slot_id" value={slotId} />
       {status === "skipped" ? (
         <Button name="action" value="unskip" variant="secondary" disabled={pending} className="h-7 px-2 text-xs">

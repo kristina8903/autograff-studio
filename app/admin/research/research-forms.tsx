@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import {
   linkFindingsAction,
@@ -30,9 +30,9 @@ export function ResearchForm({
   defaultQuery: string;
   defaultConcept: string;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(requestResearchAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(requestResearchAction, {});
   return (
-    <form action={action} className="space-y-3">
+    <form ref={formRef} action={action} className="space-y-3">
       <input type="hidden" name="month" value={month} />
       <input type="hidden" name="nonce" value={nonce} />
       <Field
@@ -63,9 +63,9 @@ export function ResearchForm({
 }
 
 export function DomainsForm({ allowed, blocked }: { allowed: string[]; blocked: string[] }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(saveDomainsAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(saveDomainsAction, {});
   return (
-    <form action={action} className="space-y-3">
+    <form ref={formRef} action={action} className="space-y-3">
       <Field
         label="Only these domains"
         hint="One per line. When set, sources come only from these (and their subdomains)."
@@ -92,9 +92,9 @@ const TIER_LABELS = {
 } as const;
 
 export function SourceReviewForm({ sourceId, tier, status }: { sourceId: string; tier: string; status: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(reviewSourceAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(reviewSourceAction, {});
   return (
-    <form action={action} className="mt-3 flex flex-wrap items-end gap-2">
+    <form ref={formRef} action={action} className="mt-3 flex flex-wrap items-end gap-2">
       <input type="hidden" name="source_id" value={sourceId} />
       <Field label="Source type">
         <Select name="tier" defaultValue={tier} className="h-8 w-64 text-xs">
@@ -140,9 +140,9 @@ export function FindingReviewForm({
   status: string;
   sourceAccepted: boolean;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(reviewFindingAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(reviewFindingAction, {});
   return (
-    <form action={action} className="mt-2 flex flex-wrap items-center gap-2">
+    <form ref={formRef} action={action} className="mt-2 flex flex-wrap items-center gap-2">
       <input type="hidden" name="finding_id" value={findingId} />
       <Input name="note" maxLength={500} placeholder="Note" aria-label="Finding note" className="h-8 w-56 text-xs" />
       {status !== "human_verified" ? (
@@ -181,10 +181,10 @@ export function FindingReviewForm({
 }
 
 export function ConflictForm({ findingId, others }: { findingId: string; others: { id: string; label: string }[] }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(linkFindingsAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(linkFindingsAction, {});
   if (!others.length) return null;
   return (
-    <form action={action} className="mt-2 flex flex-wrap items-center gap-2">
+    <form ref={formRef} action={action} className="mt-2 flex flex-wrap items-center gap-2">
       <input type="hidden" name="finding_id" value={findingId} />
       <Select name="other_id" aria-label="Conflicting finding" className="h-8 w-72 text-xs" defaultValue="">
         <option value="" disabled>
@@ -205,9 +205,9 @@ export function ConflictForm({ findingId, others }: { findingId: string; others:
 }
 
 export function UnlinkButton({ findingId, otherId }: { findingId: string; otherId: string }) {
-  const [, action, pending] = useActionState<ActionState, FormData>(linkFindingsAction, {});
+  const [, action, pending, formRef] = useKeptActionState<ActionState>(linkFindingsAction, {});
   return (
-    <form action={action} className="inline">
+    <form ref={formRef} action={action} className="inline">
       <input type="hidden" name="finding_id" value={findingId} />
       <input type="hidden" name="other_id" value={otherId} />
       <input type="hidden" name="conflict" value="false" />

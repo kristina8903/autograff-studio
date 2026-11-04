@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { POST_FORMATS } from "@/lib/domain/formats";
 import { HUMOR_LEVELS, LIST_FIELDS, SENTENCE_LENGTHS, TECHNICAL_DEPTHS, type VoiceProfile } from "@/lib/domain/voice";
@@ -19,11 +19,11 @@ export function VoiceForm({
   nextVersion: number;
   signals: { id: string; statement: string; kind: string }[];
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(saveVoiceProfile, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(saveVoiceProfile, {});
   const errors = state.errors ?? {};
   const a = profile.attributes;
   return (
-    <form action={action} className="space-y-5">
+    <form ref={formRef} action={action} className="space-y-5">
       <input type="hidden" name="founder_id" value={founderId} />
       {signals.length ? (
         <section aria-label="Feedback being applied" className="rounded-md border border-accent/40 bg-accent/5 p-4">

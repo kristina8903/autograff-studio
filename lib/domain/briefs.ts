@@ -3,9 +3,12 @@
 
 import { z } from "zod";
 
-const item = z.string().trim().min(1).max(1000);
+export const MAX_LIST_ITEMS = 30;
+export const MAX_ITEM_LENGTH = 1000;
+
+const item = z.string().trim().min(1).max(MAX_ITEM_LENGTH);
 // Missing lists read as empty, so older stored versions still parse.
-const list = z.array(item).max(30).default([]);
+const list = z.array(item).max(MAX_LIST_ITEMS).default([]);
 
 export const briefContentSchema = z.object({
   theme: z.string().trim().min(1, "Enter the month's theme.").max(200, "Keep the theme under 200 characters."),
@@ -60,14 +63,25 @@ export function lines(value: FormDataEntryValue | null): string[] {
     .filter(Boolean);
 }
 
+/**
+ * What is wrong with a one-item-per-line field, in words that say which limit
+ * was hit and where, or undefined if it is within the limits.
+ */
+export function listProblem(items: string[]): string | undefined {
+  if (items.length > MAX_LIST_ITEMS)
+    return `This has ${items.length} lines; the limit is ${MAX_LIST_ITEMS}. Combine related items on one line, or keep the most important ones.`;
+  const long = items.findIndex((text) => text.length > MAX_ITEM_LENGTH);
+  if (long >= 0)
+    return `Line ${long + 1} is ${items[long].length.toLocaleString("en-US")} characters; each line can be up to ${MAX_ITEM_LENGTH.toLocaleString("en-US")}. Split it into shorter lines.`;
+  return undefined;
+}
+
 export function parseBriefForm(
   form: FormData,
   founderIds: string[],
 ): { ok: true; data: BriefInput } | { ok: false; errors: Record<string, string> } {
-  const content = briefContentSchema.safeParse({
-    theme: form.get("theme") ?? "",
-    ...Object.fromEntries(LIST_FIELDS.map(([key]) => [key, lines(form.get(key))])),
-  });
+  const listValues = Object.fromEntries(LIST_FIELDS.map(([key]) => [key, lines(form.get(key))]));
+  const content = briefContentSchema.safeParse({ theme: form.get("theme") ?? "", ...listValues });
   const emphasis = founderEmphasisSchema.safeParse(
     Object.fromEntries(
       founderIds
@@ -75,12 +89,21 @@ export function parseBriefForm(
         .filter(([, text]) => text.length > 0),
     ),
   );
-  const facts = approvedFactsSchema.safeParse(lines(form.get("approvedFacts")));
+  const factLines = lines(form.get("approvedFacts"));
+  const facts = approvedFactsSchema.safeParse(factLines);
   const errors: Record<string, string> = {};
+  for (const [key] of LIST_FIELDS) {
+    const problem = listProblem(listValues[key]);
+    if (problem) errors[key] = problem;
+  }
   if (!content.success)
     for (const issue of content.error.issues) errors[String(issue.path[0])] ??= friendly(issue.message);
-  if (!emphasis.success) errors.founderEmphasis = "Founder emphasis is too long.";
-  if (!facts.success) errors.approvedFacts = "Keep approved facts to 30 lines of up to 1,000 characters.";
+  if (!emphasis.success)
+    errors.founderEmphasis = "Founder emphasis is too long: keep each founder's to 4,000 characters.";
+  if (!facts.success)
+    errors.approvedFacts =
+      listProblem(factLines) ??
+      `Keep approved facts to ${MAX_LIST_ITEMS} lines of up to ${MAX_ITEM_LENGTH.toLocaleString("en-US")} characters.`;
   if (!content.success || !emphasis.success || !facts.success) return { ok: false, errors };
   return {
     ok: true,

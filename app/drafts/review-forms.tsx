@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
+import { useState } from "react";
 import { Alert, Button, Field, Input, Textarea } from "@/components/ui";
 import {
   addCommentAction,
@@ -31,9 +32,9 @@ export function ApproveForm({
   versionNo: number;
   blocker: string | null;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(approveDraftAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(approveDraftAction, {});
   return (
-    <form action={action} className="space-y-3">
+    <form ref={formRef} action={action} className="space-y-3">
       <input type="hidden" name="draft_id" value={draftId} />
       <input type="hidden" name="version_id" value={versionId} />
       <Field label="Note (optional)">
@@ -51,9 +52,9 @@ export function ApproveForm({
 }
 
 export function RevokeForm({ draftId }: { draftId: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(revokeApprovalAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(revokeApprovalAction, {});
   return (
-    <form action={action} className="space-y-2">
+    <form ref={formRef} action={action} className="space-y-2">
       <input type="hidden" name="draft_id" value={draftId} />
       <Field label="Why (optional)">
         <Input name="reason" maxLength={200} />
@@ -67,7 +68,7 @@ export function RevokeForm({ draftId }: { draftId: string }) {
 }
 
 export function EditForm({ draftId, body, approved }: { draftId: string; body: string; approved: boolean }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(founderSaveVersionAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(founderSaveVersionAction, {});
   const [open, setOpen] = useState(false);
   if (!open)
     return (
@@ -76,7 +77,7 @@ export function EditForm({ draftId, body, approved }: { draftId: string; body: s
       </Button>
     );
   return (
-    <form action={action} className="space-y-3">
+    <form ref={formRef} action={action} className="space-y-3">
       <input type="hidden" name="draft_id" value={draftId} />
       <Field
         label="Post text"
@@ -101,9 +102,9 @@ export function EditForm({ draftId, body, approved }: { draftId: string; body: s
 }
 
 export function RequestChangesForm({ draftId }: { draftId: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(requestChangesAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(requestChangesAction, {});
   return (
-    <form action={action} className="space-y-2">
+    <form ref={formRef} action={action} className="space-y-2">
       <input type="hidden" name="draft_id" value={draftId} />
       <Field label="What should change?">
         <Textarea name="comment" rows={3} maxLength={2000} required />
@@ -117,7 +118,7 @@ export function RequestChangesForm({ draftId }: { draftId: string }) {
 }
 
 export function RejectForm({ draftId }: { draftId: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(rejectDraftAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(rejectDraftAction, {});
   const [confirming, setConfirming] = useState(false);
   if (!confirming)
     return (
@@ -126,7 +127,7 @@ export function RejectForm({ draftId }: { draftId: string }) {
       </Button>
     );
   return (
-    <form action={action} className="space-y-2">
+    <form ref={formRef} action={action} className="space-y-2">
       <input type="hidden" name="draft_id" value={draftId} />
       <Field label="Why (optional)">
         <Input name="note" maxLength={1000} />
@@ -145,9 +146,9 @@ export function RejectForm({ draftId }: { draftId: string }) {
 }
 
 export function RewriteForm({ draftId, nonce }: { draftId: string; nonce: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(requestRewriteAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(requestRewriteAction, {});
   return (
-    <form action={action} className="space-y-2">
+    <form ref={formRef} action={action} className="space-y-2">
       <input type="hidden" name="draft_id" value={draftId} />
       <input type="hidden" name="nonce" value={nonce} />
       <Field label="What should the rewrite do differently?" hint="The current text is kept as an earlier version.">
@@ -168,9 +169,9 @@ export function RewriteForm({ draftId, nonce }: { draftId: string; nonce: string
 }
 
 export function CommentForm({ draftId }: { draftId: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(addCommentAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(addCommentAction, {});
   return (
-    <form action={action} className="space-y-2">
+    <form ref={formRef} action={action} className="space-y-2">
       <input type="hidden" name="draft_id" value={draftId} />
       <Field label="Comment">
         <Textarea name="body" rows={2} maxLength={2000} required />

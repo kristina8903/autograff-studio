@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useKeptActionState } from "@/components/use-kept-action-state";
+import { useState } from "react";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import {
   addAdminCommentAction,
@@ -21,9 +22,9 @@ function Result({ state }: { state: ActionState }) {
 }
 
 export function WriteDraftForm({ conceptId, nonce, label }: { conceptId: string; nonce: string; label: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(requestDraftAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(requestDraftAction, {});
   return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
+    <form ref={formRef} action={action} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="concept_id" value={conceptId} />
       <input type="hidden" name="nonce" value={nonce} />
       <Button type="submit" disabled={pending} className="h-8 px-2 text-xs">
@@ -39,9 +40,9 @@ export function WriteDraftForm({ conceptId, nonce, label }: { conceptId: string;
 }
 
 export function RegenerateDraftForm({ draftId, nonce }: { draftId: string; nonce: string }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(regenerateDraftAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(regenerateDraftAction, {});
   return (
-    <form action={action} className="space-y-2">
+    <form ref={formRef} action={action} className="space-y-2">
       <input type="hidden" name="draft_id" value={draftId} />
       <input type="hidden" name="nonce" value={nonce} />
       <Field
@@ -69,7 +70,7 @@ export function EditDraftForm({
   hooks: string[];
   selectedHook: number | null;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(saveDraftVersionAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(saveDraftVersionAction, {});
   const [open, setOpen] = useState(false);
   if (!open)
     return (
@@ -78,7 +79,7 @@ export function EditDraftForm({
       </Button>
     );
   return (
-    <form action={action} className="space-y-3">
+    <form ref={formRef} action={action} className="space-y-3">
       <input type="hidden" name="draft_id" value={draftId} />
       <Field label="Post text" hint={`${body.length.toLocaleString("en-US")} characters; LinkedIn allows 3,000.`}>
         <Textarea name="body" defaultValue={body} rows={14} required maxLength={6000} />
@@ -129,10 +130,10 @@ export function FlagForm({
   canResolve: boolean;
   canOverride: boolean;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(resolveFlagAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(resolveFlagAction, {});
   if (!canResolve && !canOverride) return null;
   return (
-    <form action={action} className="mt-2 flex flex-wrap items-center gap-2">
+    <form ref={formRef} action={action} className="mt-2 flex flex-wrap items-center gap-2">
       <input type="hidden" name="draft_id" value={draftId} />
       <input type="hidden" name="flag_id" value={flagId} />
       <Input name="note" maxLength={500} placeholder="Reason" aria-label="Reason" className="h-8 w-64 text-xs" />
@@ -176,10 +177,10 @@ export function TransitionButtons({
   status: string;
   options: string[];
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(transitionDraftAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(transitionDraftAction, {});
   if (!options.length) return null;
   return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
+    <form ref={formRef} action={action} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="draft_id" value={draftId} />
       {options.map((to) => (
         <Button
@@ -207,9 +208,9 @@ export function ShareForm({
   flags: { id: string; label: string; blocking: boolean }[];
   again: boolean;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(shareDraftAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(shareDraftAction, {});
   return (
-    <form action={action} className="space-y-3">
+    <form ref={formRef} action={action} className="space-y-3">
       <input type="hidden" name="draft_id" value={draftId} />
       {flags.length ? (
         <fieldset className="space-y-1 text-sm">
@@ -240,9 +241,9 @@ export function ShareForm({
 }
 
 export function AdminCommentForm({ draftId, shared }: { draftId: string; shared: boolean }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(addAdminCommentAction, {});
+  const [state, action, pending, formRef] = useKeptActionState<ActionState>(addAdminCommentAction, {});
   return (
-    <form action={action} className="space-y-2">
+    <form ref={formRef} action={action} className="space-y-2">
       <input type="hidden" name="draft_id" value={draftId} />
       <Field label="Comment">
         <Textarea name="body" rows={2} maxLength={2000} required />
@@ -270,9 +271,9 @@ export function AdminCommentForm({ draftId, shared }: { draftId: string; shared:
 }
 
 export function ResolveCommentButton({ draftId, commentId }: { draftId: string; commentId: string }) {
-  const [, action, pending] = useActionState<ActionState, FormData>(resolveCommentAction, {});
+  const [, action, pending, formRef] = useKeptActionState<ActionState>(resolveCommentAction, {});
   return (
-    <form action={action}>
+    <form ref={formRef} action={action}>
       <input type="hidden" name="draft_id" value={draftId} />
       <input type="hidden" name="comment_id" value={commentId} />
       <Button variant="secondary" disabled={pending} className="h-7 px-2 text-xs">
