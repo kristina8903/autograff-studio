@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { buildZip } from "../tests/zip-fixture";
-import { SUPABASE_URL, accessTokenFrom, resetDatabase, signInAdmin, signInWithCode } from "./helpers";
+import { SUPABASE_URL, accessTokenFrom, resetDatabase, openFromMenu, signInAdmin, signInWithCode } from "./helpers";
 
 // Phase 3 acceptance criteria (docs/PHASES.md) as one ordered story.
 test.describe.configure({ mode: "serial" });
@@ -20,7 +20,7 @@ test.beforeAll(async ({ browser }) => {
 });
 
 test("editing a voice profile creates a new version and earlier versions stay readable", async () => {
-  await admin.getByRole("link", { name: "Voice", exact: true }).click();
+  await openFromMenu(admin, "Setup", "Voice");
   await admin.getByRole("table", { name: "Voice" }).getByRole("link", { name: "Local CEO" }).click();
   await expect(admin.getByText("Current version: v1.")).toBeVisible();
   await admin.getByLabel("Phrases to avoid").fill("game-changer\nIn today's fast-paced world\nsynergy");
@@ -39,7 +39,7 @@ test("editing a voice profile creates a new version and earlier versions stay re
 });
 
 test("a stable preference is accepted only by applying it to a new profile version", async () => {
-  await admin.getByRole("link", { name: "Feedback", exact: true }).click();
+  await openFromMenu(admin, "Setup", "Feedback");
   const feedback = admin.getByRole("table", { name: "Feedback" });
   const stable = feedback.getByRole("row").filter({ hasText: "Never open with a question." });
   const oneOff = feedback.getByRole("row").filter({ hasText: "Shorten the second paragraph" });

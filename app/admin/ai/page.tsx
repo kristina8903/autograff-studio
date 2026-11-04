@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { AiSpendCard } from "@/components/ai-spend";
 import { AutoRefresh } from "@/components/auto-refresh";
-import { Badge, Card, PageHeader } from "@/components/ui";
+import { Alert, Badge, Card, PageHeader } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth/dal";
+import { EnvConfigError } from "@/lib/env";
 import { usd } from "@/lib/domain/pricing";
 import { llmModels, llmProvider } from "@/lib/providers/llm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -43,8 +44,7 @@ export default async function AiUsagePage() {
     supabase.from("founders").select("id, display_name"),
   ]);
   const names = Object.fromEntries((founders ?? []).map((f) => [f.id, f.display_name]));
-  const provider = llmProvider().name;
-  const models = llmModels();
+  const config = aiConfig();
   const active = (runs ?? []).some((r) => r.status === "queued" || r.status === "running");
 
   return (
@@ -56,23 +56,39 @@ export default async function AiUsagePage() {
       />
       <AiSpendCard />
       <Card className="mb-6 text-sm">
-        <p>
-          Provider:{" "}
-          {provider === "fake" ? (
-            <>
-              <Badge>fake</Badge>{" "}
-              <span className="text-muted">
-                No AI calls are made. Set LLM_PROVIDER=anthropic and ANTHROPIC_API_KEY to switch.
-              </span>
-            </>
-          ) : (
-            <Badge tone="success">Anthropic</Badge>
-          )}
-        </p>
-        <p className="mt-1 text-muted">
-          Concepts and drafts: {models.draft} · Checks: {models.extract}. The ceilings are kept in the database and
-          can&apos;t be raised from the app.
-        </p>
+        {"problems" in config ? (
+          <>
+            <Alert tone="error">
+              The AI settings are not configured correctly, so no AI run can start. Fix these in the hosting
+              provider&apos;s environment variables, then redeploy:
+            </Alert>
+            <ul aria-label="Configuration problems" className="mt-2 list-disc pl-5">
+              {config.problems.map((problem) => (
+                <li key={problem}>{problem}</li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <p>
+              Provider:{" "}
+              {config.provider === "fake" ? (
+                <>
+                  <Badge>fake</Badge>{" "}
+                  <span className="text-muted">
+                    No AI calls are made. Set LLM_PROVIDER=anthropic and ANTHROPIC_API_KEY to switch.
+                  </span>
+                </>
+              ) : (
+                <Badge tone="success">Anthropic</Badge>
+              )}
+            </p>
+            <p className="mt-1 text-muted">
+              Concepts and drafts: {config.models.draft} · Checks: {config.models.extract}. The ceilings are kept in the
+              database and can&apos;t be raised from the app.
+            </p>
+          </>
+        )}
       </Card>
       <Card className="overflow-x-auto p-0">
         <table aria-label="Runs" className="w-full text-left text-sm">
@@ -169,4 +185,19 @@ export default async function AiUsagePage() {
       </Card>
     </>
   );
+}
+
+/**
+ * The provider and models, or the names of the misconfigured variables. The
+ * problems name variables and what is wrong, never their values, so they are
+ * safe to show to the admin and to log.
+ */
+function aiConfig(): { provider: string; models: { draft: string; extract: string } } | { problems: string[] } {
+  try {
+    return { provider: llmProvider().name, models: llmModels() };
+  } catch (error) {
+    if (!(error instanceof EnvConfigError)) throw error;
+    console.error(error.message);
+    return { problems: error.problems };
+  }
 }

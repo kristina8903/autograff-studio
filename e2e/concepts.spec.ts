@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
-import { resetDatabase, signInAdmin, signInWithCode } from "./helpers";
+import { resetDatabase, openFromMenu, signInAdmin, signInWithCode } from "./helpers";
 
 // Phase 4a acceptance criteria, against the fake AI provider (no real calls).
 test.describe.configure({ mode: "serial" });
@@ -42,7 +42,7 @@ test("a concept batch is generated and records what it was based on, the model a
   await expect(ceoConcepts()).toContainText("Operational uncertainty in vehicle repair: angle 1");
   await expect(ceoConcepts()).toContainText("needs a personal story");
 
-  await admin.getByRole("link", { name: "AI usage", exact: true }).click();
+  await openFromMenu(admin, "Setup", "AI usage");
   const run = admin.getByRole("table", { name: "Runs" }).getByRole("row").nth(1);
   await expect(run).toContainText("Concepts");
   await expect(run).toContainText("Local CEO · 3");
