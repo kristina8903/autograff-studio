@@ -47,13 +47,13 @@ describe("parseBriefForm", () => {
       expect(tooMany.errors.objectives).toMatch(/^This has 42 lines; the limit is 30\./);
     }
 
-    const long = parseBriefForm(form({ theme: "T", approvedFacts: `Short\n${"x".repeat(1240)}` }), []);
+    const long = parseBriefForm(form({ theme: "T", approvedFacts: `Short\n${"x".repeat(2040)}` }), []);
     expect(long.ok).toBe(false);
     if (!long.ok)
-      expect(long.errors.approvedFacts).toMatch(/^Line 2 is 1,240 characters; each line can be up to 1,000\./);
+      expect(long.errors.approvedFacts).toMatch(/^Line 2 is 2,040 characters; each line can be up to 2,000\./);
 
     // Blank lines don't count, and the limits themselves are allowed.
-    const atLimit = Array.from({ length: 30 }, () => "y".repeat(1000)).join("\n\n");
+    const atLimit = Array.from({ length: 30 }, () => "y".repeat(2000)).join("\n\n");
     expect(parseBriefForm(form({ theme: "T", approvedFacts: atLimit }), []).ok).toBe(true);
   });
 
