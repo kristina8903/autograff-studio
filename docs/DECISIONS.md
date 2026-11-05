@@ -240,9 +240,28 @@ would use the whole budget. Instead: the paid plan's daily backups, plus a
 weekly independent export, plus immutable versions in the app itself (most
 mistakes are undone in-app, not by restoring the database).
 
-### D-17: Slack terms and scope review. **Open**, blocking Phase 6
+### D-17: Slack terms and scope review. **Decided 2026-11-05: no Slack for now.** Phase 6 is deferred
 
-Someone must read the Slack API Terms and the App Developer Policy in full
+- **Why.** Autograff's Slack channels discuss customers. Extracting insights
+  means sending message text to the AI provider, even if nothing reaches a
+  post. That raises questions the filters cannot answer:
+  - Slack's API terms on LLM processing and storage;
+  - customer confidentiality commitments;
+  - data protection for the people named in messages;
+  - telling, or getting consent from, the team whose messages are read.
+- **Instead.** Founders' stories reach the studio as they do today:
+  - the founder emphasis in the brief;
+  - the admin editing a concept;
+  - founders sharing their own writing.
+- **If revisited,** the preferred shape is one dedicated channel (for example
+  `#content-ideas`) where people post on purpose, with customers anonymised,
+  never existing channels where customers are discussed. Before any work:
+  - the terms review below;
+  - a check of customer contracts;
+  - legal sign-off on data protection;
+  - telling the team.
+
+The original review, still required before Phase 6 is reconsidered: someone must read the Slack API Terms and the App Developer Policy in full
 regarding runtime LLM processing and storage (INTEGRATIONS §4.4). Then decide:
 
 - the channel allow-list;
@@ -781,7 +800,7 @@ If spend runs high, the levers are, in order:
    transactional email provider to use (free tier).
 3. **Phase 3:** each founder's style rules (D-15), agreed with the founder, and
    entered on their voice profile.
-4. **Before Phase 6:** who reads the Slack terms (D-17); which channels.
+4. **Phase 6 is deferred** (D-17, 2026-11-05: no Slack for now). If it is reconsidered: who reads the Slack terms, and the single dedicated channel.
 5. **Before Phase 10:** who does the LinkedIn terms review (D-18).
 
 ## 4. Change log
@@ -799,4 +818,5 @@ If spend runs high, the levers are, in order:
 | 2026-10-22 | Phase 5 built; D-33 added; checklist items 10–11 verified |
 | 2026-10-22 | Phase 9 built; D-34 added |
 | 2026-10-27 | Phase 8 built; D-35 added |
+| 2026-11-05 | D-17 decided: no Slack for now; Phase 6 deferred, so Phase 10 follows go-live |
 | 2026-10-21 | User answers recorded: D-01, D-02, D-04, D-11, D-13, D-14, D-19 accepted; D-09, D-10 accepted on recommendation; D-15 deferred to Phase 3; D-16 and D-21 set by the $100/month budget |

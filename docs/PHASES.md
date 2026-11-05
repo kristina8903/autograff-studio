@@ -43,7 +43,7 @@ moves.
 | 7 | **Phase 9: Assisted publishing and reporting** (moved up) | Completes the loop to a published post, making the MVP usable end to end |
 | 8 | Phase 8: Pipeline management | Its dashboard needs real publication records to be meaningful |
 | — | **MVP complete**: production go-live (§Go-live) | Value delivered with no Slack or LinkedIn |
-| 9 | Phase 6: Slack integration (moved later) | The highest privacy risk and pending terms questions; not needed for the MVP |
+| 9 | Phase 6: Slack integration (moved later; **deferred 2026-11-05**, D-17) | The highest privacy risk and pending terms questions; not needed for the MVP. Not planned: the channels discuss customers |
 | 10 | Phase 10: LinkedIn publishing and analytics | Depends on API access and terms that are not yet verified |
 
 The original order (1→10) would also have worked, but drafts produced in
@@ -349,6 +349,12 @@ the cost ledger.
 ---
 
 ## Phase 6: Slack integration
+
+> **Status (2026-11-05): deferred, no Slack for now (D-17).** Do not start
+> this phase. If it is reconsidered, the preferred scope is one dedicated
+> channel where people post on purpose, never existing channels where
+> customers are discussed; and the terms review, a check of customer
+> contracts and legal sign-off come first.
 
 **Goal.** Turn selected Slack conversations into reviewed, provenance-linked
 founder insights without broad ingestion.

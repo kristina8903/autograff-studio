@@ -45,6 +45,8 @@ the same change when behavior changes.
   acceptance criterion has local evidence. Go-live is next in the agreed
   order and is not approved to start.**
 - Phase order is agreed (D-19): 1, 2, 3, 4, 7, 5, 9, 8, go-live, 6, 10.
+  **Phase 6 (Slack) is deferred (D-17, 2026-11-05): no Slack for now.** Do
+  not start it; after go-live, Phase 10 is next.
 - End each phase with a report:
   - what was built;
   - the exact test commands run and their results (paste failures; do not
